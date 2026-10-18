@@ -159,11 +159,12 @@ export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source
                       value={s.weight}
                       step={step}
                       decimals
-                      placeholder={settings.units}
+                      placeholder={ex.plannedWeight ? `${ex.plannedWeight}` : settings.units}
+                      start={ex.sets[i - 1]?.weight ?? ex.plannedWeight ?? undefined}
                       onChange={(v) => updateSet(i, { weight: v })}
                       className={cx(s.done && 'border-transparent bg-up-soft')}
                     />
-                    <Stepper compact label={`Set ${i + 1} reps`} value={s.reps} step={1} placeholder="reps" onChange={(v) => updateSet(i, { reps: v })} className={cx(s.done && 'border-transparent bg-up-soft')} />
+                    <Stepper compact label={`Set ${i + 1} reps`} value={s.reps} step={1} placeholder={`${ex.repMin}-${ex.repMax}`} start={ex.repMax} onChange={(v) => updateSet(i, { reps: v })} className={cx(s.done && 'border-transparent bg-up-soft')} />
                     <button
                       type="button"
                       onClick={() => toggleDone(i)}

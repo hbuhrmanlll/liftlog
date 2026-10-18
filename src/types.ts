@@ -181,4 +181,30 @@ export interface Settings {
   deloadReminders: boolean;
   warmupSuggestions: boolean;
   aiEnabled: boolean;
+  /** Start set rows blank (target shown as a hint) so every set is typed in. */
+  prefillSets: boolean;
+  /** Remind to log bodyweight once a week, on this weekday (0 = Sunday). */
+  weighInReminders: boolean;
+  weighInDay: number;
+  /** Body stats for calorie estimates. */
+  sex: Sex;
+  birthYear?: number;
+  heightCm?: number;
+}
+
+export type Sex = 'male' | 'female' | 'unspecified';
+
+/** A person who uses LiftLog on this device. Their data lives in its own database. */
+export interface Profile {
+  id: string;
+  username: string;
+  /** Lower-cased username; unique. */
+  usernameKey: string;
+  displayName: string;
+  dbName: string;
+  pinHash: string;
+  pinSalt: string;
+  color: string;
+  createdAt: number;
+  lastLoginAt?: number;
 }

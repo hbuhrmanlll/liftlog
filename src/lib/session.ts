@@ -62,7 +62,11 @@ export function buildWorkoutExercise(
   const weight = override ? override.weight : rec.weight;
   const action = override ? override.action : rec.action;
   const main = isMainLift(exercise, program);
-  const sets: SetLog[] = Array.from({ length: targets.sets }, (_, i) => makeSet(weight, prefillReps({ ...rec, action }, i, targets.repMin, targets.repMax, lastReps)));
+  // With pre-fill off, every set starts blank so each one is typed in (targets show as hints).
+  const prefill = settings.prefillSets !== false;
+  const sets: SetLog[] = Array.from({ length: targets.sets }, (_, i) =>
+    prefill ? makeSet(weight, prefillReps({ ...rec, action }, i, targets.repMin, targets.repMax, lastReps)) : makeSet(null, null),
+  );
   return {
     uid: uid('wex'),
     exerciseId: exercise.id,

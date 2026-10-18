@@ -9,6 +9,7 @@ import { completedSets, completedWorkouts, DAY_MS, epley1RM, exerciseHistory, mu
 import { DAY_LABEL } from './schedule';
 import { recommendationFor } from './session';
 import { isMainLift } from './targets';
+import { progressReport, progressReportText } from './progressReport';
 
 export interface CoachContextInput {
   settings: Settings;
@@ -70,6 +71,7 @@ export function buildCoachContext(input: CoachContextInput): string {
     }
   }
   sections.push({ priority: 0, title: 'CURRENT PROGRAM', body: programLines.join('\n') });
+  sections.push({ priority: 1, title: 'PROGRESS REPORT (all time)', body: progressReportText(progressReport({ settings, program, workouts, cardio, bodyweight, now }), u) });
   sections.push({ priority: 0, title: "ENGINE RECOMMENDATIONS FOR NEXT SESSION (rule-based default)", body: recLines.join('\n') || 'No history yet.' });
 
   // Weekly muscle sets

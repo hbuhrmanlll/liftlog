@@ -1,9 +1,10 @@
 import { ArrowLeft, ArrowRight, Check, Dumbbell, Flame, Target, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
+import { BodyStatsForm } from '../components/BodyStatsForm';
 import { LogoMark } from '../components/Logo';
 import { Button, Card, cx, DayBadge, Segmented } from '../components/ui';
 import { changeUnits, updateExercise, updateSettings } from '../db/repo';
-import { useProgram, useSettings } from '../hooks/useData';
+import { latestBodyweight, useBodyweight, useProgram, useSettings } from '../hooks/useData';
 import { roundToLoadable } from '../lib/rounding';
 import { DAY_DESCRIPTION } from '../lib/schedule';
 import { DAY_TYPES, type Goal, type Schedule, type Units } from '../types';
@@ -17,6 +18,7 @@ const GOALS: { value: Goal; title: string; body: string; Icon: typeof Flame }[] 
 export function OnboardingPage() {
   const settings = useSettings();
   const program = useProgram();
+  const bodyweight = useBodyweight();
   const [step, setStep] = useState(0);
   const [weights, setWeights] = useState<Record<string, string>>({});
 
@@ -39,8 +41,8 @@ export function OnboardingPage() {
           <LogoMark className="size-9" />
           <span className="text-lg font-bold tracking-tight">LiftLog</span>
         </div>
-        <div className="flex gap-1.5" aria-label={`Step ${step + 1} of 2`}>
-          {[0, 1].map((i) => (
+        <div className="flex gap-1.5" aria-label={`Step ${step + 1} of 3`}>
+          {[0, 1, 2].map((i) => (
             <span key={i} className={cx('h-1.5 rounded-full transition-all', i === step ? 'w-6 bg-accent' : 'w-1.5 bg-surface-3')} />
           ))}
         </div>
@@ -117,6 +119,27 @@ export function OnboardingPage() {
       {step === 1 && (
         <div className="animate-fade-up flex flex-1 flex-col">
           <button type="button" onClick={() => setStep(0)} className="mb-3 inline-flex items-center gap-1 self-start text-sm font-medium text-ink-2 hover:text-ink">
+            <ArrowLeft className="size-4" aria-hidden /> Back
+          </button>
+          <h1 className="text-[28px] font-bold leading-tight tracking-tight">About you</h1>
+          <p className="mt-2 mb-6 text-[15px] text-ink-2">Used to estimate the calories you burn. Every field is optional.</p>
+          <BodyStatsForm
+            settings={settings}
+            latestWeight={latestBodyweight(bodyweight)}
+            submitLabel="Continue"
+            onSaved={() => setStep(2)}
+            secondary={
+              <Button variant="ghost" className="w-full" onClick={() => setStep(2)}>
+                Skip for now
+              </Button>
+            }
+          />
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="animate-fade-up flex flex-1 flex-col">
+          <button type="button" onClick={() => setStep(1)} className="mb-3 inline-flex items-center gap-1 self-start text-sm font-medium text-ink-2 hover:text-ink">
             <ArrowLeft className="size-4" aria-hidden /> Back
           </button>
           <h1 className="text-[28px] font-bold leading-tight tracking-tight">Starting weights</h1>

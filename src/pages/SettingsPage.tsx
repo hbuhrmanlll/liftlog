@@ -1,6 +1,7 @@
 import { Bot, CheckCircle2, ChevronRight, Download, FileSpreadsheet, ListChecks, Moon, RefreshCw, Sun, Trash2, Upload, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { ProfileSettings } from '../components/ProfileSettings';
 import { Button, Card, ConfirmDialog, cx, PageHeader, Segmented, Spinner, Stepper, TextField, Toggle } from '../components/ui';
 import { db } from '../db/db';
 import { changeUnits, exportAll, getProgram, importAll, resetAll, updateExercise, updateSettings } from '../db/repo';
@@ -97,6 +98,8 @@ export function SettingsPage() {
   return (
     <div className="animate-fade-up space-y-7">
       <PageHeader title="Settings" />
+
+      <ProfileSettings />
 
       <Group title="Appearance">
         <Row label="Theme">
@@ -237,7 +240,14 @@ export function SettingsPage() {
         )}
         <Toggle label="Sound when rest ends" checked={s.timerSound} onChange={(timerSound) => void updateSettings({ timerSound })} />
         <Toggle label="Vibrate when rest ends" description="On phones that support it" checked={s.timerVibrate} onChange={(timerVibrate) => void updateSettings({ timerVibrate })} />
+        <Toggle
+          label="Pre-fill sets with targets"
+          description="Off: every set starts blank and you type in each one (targets show as hints)"
+          checked={s.prefillSets}
+          onChange={(prefillSets) => void updateSettings({ prefillSets })}
+        />
         <Toggle label="Warm-up suggestions" description="Ramp-up sets for the first compound lift (not counted)" checked={s.warmupSuggestions} onChange={(warmupSuggestions) => void updateSettings({ warmupSuggestions })} />
+        <Toggle label="Weekly weigh-in reminder" description="Reminder on Home; change the day in Progress → Weight" checked={s.weighInReminders} onChange={(weighInReminders) => void updateSettings({ weighInReminders })} />
         <Toggle label="Deload reminders" description="A nudge after 6-8 weeks of continuous training" checked={s.deloadReminders} onChange={(deloadReminders) => void updateSettings({ deloadReminders })} />
       </Group>
 
@@ -322,7 +332,7 @@ export function SettingsPage() {
 
       <Group title="Your data">
         <div className="space-y-2 py-3.5">
-          <p className="mb-3 text-[13px] text-ink-3">Everything is stored only on this device. Export a backup regularly, especially before switching phones.</p>
+          <p className="mb-3 text-[13px] text-ink-3">This profile's data is stored only on this device. Export a backup regularly, especially before switching phones.</p>
           <Button className="w-full justify-start" onClick={() => void exportJson()}>
             <Download className="size-4" aria-hidden /> Export backup (JSON)
           </Button>
@@ -399,7 +409,7 @@ export function SettingsPage() {
       <ConfirmDialog
         open={confirmReset}
         title="Reset all data?"
-        message="This permanently deletes every workout, PR, cardio log, bodyweight entry, chat, and program change on this device. Export a backup first if you might want it back."
+        message="This permanently deletes every workout, PR, cardio log, bodyweight entry, chat, and program change in this profile. Other profiles aren't affected. Export a backup first if you might want it back."
         confirmLabel="Delete everything"
         danger
         requireText="RESET"

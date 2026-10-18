@@ -1,12 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
-import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { ensureSeeded } from './db/repo';
 import { recordCrash, reloadOnce } from './lib/crashLog';
 import './index.css';
+import { Root } from './Root';
 
 registerSW({ immediate: true });
 
@@ -32,16 +30,10 @@ try {
   /* ignore */
 }
 
-ensureSeeded()
-  .catch((err: unknown) => console.error('Failed to initialize database', err))
-  .finally(() => {
-    createRoot(document.getElementById('root')!).render(
-      <StrictMode>
-        <ErrorBoundary>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </ErrorBoundary>
-      </StrictMode>,
-    );
-  });
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ErrorBoundary>
+      <Root />
+    </ErrorBoundary>
+  </StrictMode>,
+);

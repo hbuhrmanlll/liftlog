@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { addCardio } from '../db/repo';
 import { useToast } from '../hooks/toast';
+import { latestBodyweight, useBodyweight, useSettings } from '../hooks/useData';
+import { bodyStats, cardioCalories } from '../lib/calories';
 import type { Units } from '../types';
 import { Button, cx, TextField } from './ui';
 
@@ -14,6 +16,9 @@ export function CardioForm({ units, onDone }: { units: Units; onDone?: () => voi
   const [hr, setHr] = useState('');
   const mins = Number(minutes);
   const valid = Number.isFinite(mins) && mins > 0 && mins <= 600;
+  const settings = useSettings();
+  const bodyweight = useBodyweight();
+  const estimate = valid ? cardioCalories({ type, minutes: mins, heartRate: hr ? Number(hr) : undefined }, bodyStats(settings, latestBodyweight(bodyweight))) : null;
 
   const save = async () => {
     if (!valid) return;
@@ -55,6 +60,15 @@ export function CardioForm({ units, onDone }: { units: Units; onDone?: () => voi
         <TextField label={`Distance (${units === 'kg' ? 'km' : 'mi'})`} inputMode="decimal" placeholder="Optional" value={distance} onChange={(e) => setDistance(e.target.value.replace(/[^0-9.,]/g, ''))} />
         <TextField label="Avg heart rate" inputMode="numeric" placeholder="Optional" value={hr} onChange={(e) => setHr(e.target.value.replace(/[^0-9]/g, ''))} />
       </div>
+      <p className="text-[13px] text-ink-3">
+        {estimate !== null ? (
+          <>
+            About <strong className="text-ink">{estimate} kcal</strong> burned (estimate{hr ? ', using your heart rate' : ''}).
+          </>
+        ) : (
+          'Add your weight in Settings → Profile to see calories burned.'
+        )}
+      </p>
       <Button type="submit" variant="primary" className="w-full" disabled={!valid}>
         Log cardio
       </Button>

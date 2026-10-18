@@ -165,7 +165,10 @@ export function Stepper({
   decimals = false,
   className,
   compact,
+  start,
 }: {
+  /** Value the first +/- tap fills in when the box is blank. */
+  start?: number;
   value: number | null;
   onChange: (v: number | null) => void;
   step: number;
@@ -187,6 +190,8 @@ export function Stepper({
     if (Number.isFinite(n)) onChange(Math.max(min, decimals ? Math.round(n * 100) / 100 : Math.round(n)));
   };
   const bump = (d: number) => {
+    // From a blank box, the first tap fills in the hinted target.
+    if (value === null && start !== undefined) return onChange(start);
     const base = value ?? 0;
     const next = Math.max(min, Math.round((base + d) * 100) / 100);
     onChange(next);

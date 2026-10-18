@@ -2,14 +2,15 @@ import { AlertTriangle, ArrowLeft, Link2, Sparkles, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ExerciseCharts } from '../components/charts';
+import { SetLogTable } from '../components/SetLogTable';
 import { AskCoachOpinion, CoachSuggestions } from '../components/coach';
 import { CuesAndMistakes, VideoBlock } from '../components/ExerciseGuide';
 import { Button, Card, DayBadge, EmptyState, PageHeader, RecBadge, SectionTitle, Sheet, Stat, TextField } from '../components/ui';
 import { clearOverride, updateExercise } from '../db/repo';
 import { useToast } from '../hooks/toast';
 import { useOverrides, useProgram, useSettings, useWorkouts } from '../hooks/useData';
-import { epley1RM, exerciseHistory, normalizeKey, personalRecords, summarizeSession } from '../lib/calculations';
-import { formatClock, formatDate, formatNumber, formatWeight } from '../lib/format';
+import { exerciseHistory, normalizeKey, personalRecords } from '../lib/calculations';
+import { formatClock, formatNumber, formatWeight } from '../lib/format';
 import { formatLoad } from '../lib/progression';
 import { recommendationFor } from '../lib/session';
 import { parseYouTubeId } from '../lib/youtube';
@@ -199,17 +200,7 @@ export function ExerciseDetailPage() {
                 </ul>
               </Card>
             )}
-            <Card as="ul" className="divide-y divide-line">
-              {history.slice(0, 12).map((h) => (
-                <li key={h.date} className="flex items-center justify-between gap-3 px-4 py-3 text-[14px]">
-                  <span className="text-ink-2">{formatDate(h.date, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                  <span className="tnum text-right">
-                    <span className="font-medium">{summarizeSession(h.sets, settings.units, ex.equipment === 'bodyweight')}</span>
-                    <span className="block text-[12px] text-ink-3">e1RM {formatNumber(Math.max(...h.sets.map((s) => epley1RM(s.weight, s.reps))))}</span>
-                  </span>
-                </li>
-              ))}
-            </Card>
+            <SetLogTable history={history} units={settings.units} bodyweight={ex.equipment === 'bodyweight'} />
           </div>
         )}
       </section>

@@ -44,7 +44,7 @@ export const defaultRunStream: RunStream = async (apiKey, params, onText, signal
 };
 
 const bodySchema = z.object({
-  task: z.enum(['chat', 'wrapup', 'checkin', 'cardio', 'opinion', 'suggest']),
+  task: z.enum(['chat', 'wrapup', 'checkin', 'cardio', 'progress', 'opinion', 'suggest']),
   context: z.string().max(LIMITS.contextChars),
   messages: z
     .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1).max(LIMITS.messageChars) }))
@@ -58,6 +58,7 @@ const EFFORT: Record<CoachTask, 'low' | 'medium'> = {
   wrapup: 'low',
   checkin: 'medium',
   cardio: 'low',
+  progress: 'medium',
   opinion: 'medium',
   suggest: 'medium',
 };

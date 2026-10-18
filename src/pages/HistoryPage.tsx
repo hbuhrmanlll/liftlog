@@ -7,6 +7,7 @@ import { useToast } from '../hooks/toast';
 import { latestBodyweight, useBodyweight, useCardio, useSettings, useWorkouts } from '../hooks/useData';
 import { completedWorkouts, startOfDay, workoutDurationSec, workoutSetCount, workoutVolume } from '../lib/calculations';
 import { formatCompact, formatDate, formatDuration } from '../lib/format';
+import { bodyStats, cardioCalories, workoutCalories, type BodyStats } from '../lib/calories';
 import type { CardioLog, Workout } from '../types';
 
 type Entry = { kind: 'workout'; date: number; w: Workout } | { kind: 'cardio'; date: number; c: CardioLog };
@@ -19,6 +20,7 @@ export function HistoryPage() {
   const bodyweight = useBodyweight();
   const done = useMemo(() => completedWorkouts(workouts), [workouts]);
   const bw = latestBodyweight(bodyweight);
+  const stats = bodyStats(settings, bw);
 
   const entries = useMemo<Entry[]>(() => [...done.map((w) => ({ kind: 'workout' as const, date: w.startedAt, w })), ...cardio.map((c) => ({ kind: 'cardio' as const, date: c.date, c }))].sort((a, b) => b.date - a.date), [done, cardio]);
 
@@ -57,7 +59,7 @@ export function HistoryPage() {
             <section key={g.label}>
               <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wider text-ink-3">{g.label}</h2>
               <Card as="ul" className="divide-y divide-line overflow-hidden">
-                {g.items.map((e) => (e.kind === 'workout' ? <WorkoutRow key={e.w.id} w={e.w} units={settings.units} bw={bw} /> : <CardioRow key={e.c.id} c={e.c} units={settings.units} />))}
+                {g.items.map((e) => (e.kind === 'workout' ? <WorkoutRow key={e.w.id} w={e.w} units={settings.units} bw={bw} stats={stats} /> : <CardioRow key={e.c.id} c={e.c} units={settings.units} stats={stats} />))}
               </Card>
             </section>
           ))}
@@ -69,7 +71,8 @@ export function HistoryPage() {
   );
 }
 
-function WorkoutRow({ w, units, bw }: { w: Workout; units: string; bw?: number }) {
+function WorkoutRow({ w, units, bw, stats }: { w: Workout; units: string; bw?: number; stats: BodyStats }) {
+  const kcal = workoutCalories(w, stats);
   return (
     <li>
       <Link to={`/history/${w.id}`} className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2">
@@ -85,6 +88,7 @@ function WorkoutRow({ w, units, bw }: { w: Workout; units: string; bw?: number }
           <p className="tnum mt-1 text-[13px] text-ink-3">
             <Clock className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />
             {formatDuration(workoutDurationSec(w))} · {workoutSetCount(w)} sets · {formatCompact(workoutVolume(w, bw))} {units}
+            {kcal !== null && kcal > 0 && ` · ${kcal} kcal`}
           </p>
         </div>
         <ChevronRight className="size-5 shrink-0 text-ink-3" aria-hidden />
@@ -93,7 +97,8 @@ function WorkoutRow({ w, units, bw }: { w: Workout; units: string; bw?: number }
   );
 }
 
-function CardioRow({ c, units }: { c: CardioLog; units: string }) {
+function CardioRow({ c, units, stats }: { c: CardioLog; units: string; stats: BodyStats }) {
+  const kcal = cardioCalories(c, stats);
   const toast = useToast();
   return (
     <li className="flex items-center gap-3 px-4 py-3.5">
@@ -108,6 +113,7 @@ function CardioRow({ c, units }: { c: CardioLog; units: string }) {
           {formatDate(c.date, { weekday: 'short', month: 'short', day: 'numeric' })}
           {c.distance ? ` · ${c.distance} ${units === 'kg' ? 'km' : 'mi'}` : ''}
           {c.heartRate ? ` · ${c.heartRate} bpm` : ''}
+          {kcal ? ` · ${kcal} kcal` : ''}
         </p>
       </div>
       <IconButton

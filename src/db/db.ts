@@ -26,7 +26,22 @@ export class LiftLogDB extends Dexie {
   }
 }
 
-export const db = new LiftLogDB();
+/** The original single-user database name; the first profile takes it over. */
+export const LEGACY_DB_NAME = 'liftlog';
+
+/**
+ * The signed-in profile's database. Modules import this binding by name, so
+ * reassigning it (ES module live binding) switches every query to that profile.
+ */
+export let db = new LiftLogDB(LEGACY_DB_NAME);
+
+export function switchToProfileDb(dbName: string): LiftLogDB {
+  if (db.name !== dbName) {
+    db.close();
+    db = new LiftLogDB(dbName);
+  }
+  return db;
+}
 
 export const ALL_TABLES = ['settings', 'exercises', 'workouts', 'cardio', 'bodyweight', 'chat', 'overrides', 'kv'] as const;
 export type TableName = (typeof ALL_TABLES)[number];

@@ -8,6 +8,7 @@ import { saveWorkout } from '../db/repo';
 import { latestBodyweight, useBodyweight, useOverrides, useProgram, useSettings, useWorkout, useWorkouts } from '../hooks/useData';
 import { loadCoachContext, useCoachAvailability, useCoachRequest } from '../hooks/useCoach';
 import { completedSets, exerciseHistory, summarizeSession, workoutDurationSec, workoutSetCount, workoutVolume } from '../lib/calculations';
+import { bodyStats, workoutCalories } from '../lib/calories';
 import { streamCoach } from '../lib/coachClient';
 import { formatCompact, formatDateLong, formatDuration } from '../lib/format';
 import { prsForWorkout } from '../lib/insights';
@@ -41,6 +42,7 @@ function Summary({ workout }: { workout: Workout }) {
 
   const prs = useMemo(() => prsForWorkout(workout, workouts, u), [workout, workouts, u]);
   const volume = workoutVolume(workout, latestBodyweight(bodyweight));
+  const kcal = workoutCalories(workout, bodyStats(settings, latestBodyweight(bodyweight), new Date(workout.startedAt)));
   const recs = useMemo(
     () =>
       workout.exercises
@@ -68,11 +70,13 @@ function Summary({ workout }: { workout: Workout }) {
         </p>
       </header>
 
-      <Card className="grid grid-cols-2 gap-x-4 gap-y-5 p-5 sm:grid-cols-4">
+      <Card className="grid grid-cols-3 gap-x-4 gap-y-5 p-5">
         <Stat label="Duration" value={formatDuration(workoutDurationSec(workout))} />
+        <Stat label="Calories" value={kcal === null ? '-' : kcal} sub={kcal === null ? <Link to="/settings#profile" className="text-accent">add weight</Link> : 'kcal (est.)'} />
         <Stat label="Volume" value={formatCompact(volume)} sub={`${u} lifted`} />
         <Stat label="Sets" value={workoutSetCount(workout)} sub="completed" />
         <Stat label="New PRs" value={prs.length} sub={prs.length ? 'nice work' : 'keep pushing'} />
+        <Stat label="Exercises" value={workout.exercises.filter((e) => completedSets(e).length > 0).length} sub="logged" />
       </Card>
 
       {prs.length > 0 && (

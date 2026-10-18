@@ -27,6 +27,10 @@ export const DEFAULT_SETTINGS: Settings = {
   deloadReminders: true,
   warmupSuggestions: true,
   aiEnabled: true,
+  prefillSets: true,
+  weighInReminders: true,
+  weighInDay: 1,
+  sex: 'unspecified',
 };
 
 export const LB_PER_KG = 2.2046226218;

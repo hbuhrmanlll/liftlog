@@ -102,6 +102,15 @@ The coach receives a compact summary of your training (built in [`src/lib/coachC
 
 ---
 
+## Profiles, calories, and tracking
+
+- **Profiles:** several people can share one phone. Each profile has a unique username and a 4-8 digit PIN, and its workouts, weigh-ins, settings, and coach chats live in a separate on-device database (`src/db/profiles.ts`). PINs are stored only as salted PBKDF2 hashes, and 5 wrong tries lock the profile for 30 seconds. This keeps people's logs apart on a shared phone; it isn't server-grade account security, because there's no server. The first profile created after upgrading keeps the data that was already on the phone.
+- **Set-by-set logging:** every set records weight, reps, and optional RIR. Turn off **Settings → Pre-fill sets with targets** to start every set blank (the targets show as hints). Each exercise page has a full set-by-set log.
+- **Calories:** estimated from your age, sex, height, and weight (**Settings → Profile → About you**). Resting burn uses the Mifflin-St Jeor equation; workouts and cardio use MET values corrected for your resting burn, and cardio with an average heart rate uses the Keytel equation (`src/lib/calories.ts`). These are estimates, typically within about 20%.
+- **Weight tracker:** **Progress → Weight** has a weekly weigh-in, a chart, and your weekly rate of change. A reminder shows on Home on your weigh-in day, and **Add a weekly phone reminder** downloads a repeating calendar event, so your phone's calendar notifies you even when the app is closed.
+- **Strength tracker:** **Progress → Strength** shows a strength score (the sum of your best estimated 1-rep max on each day's main lift) by week, plus first-to-latest trends for every lift.
+- **Progress overview:** **Progress → Overview** summarizes consistency, PRs, strength, weight, and calories, and the AI Coach can review it and tell you what to keep doing and what to improve.
+
 ## How the progression engine works
 
 [`src/lib/progression.ts`](src/lib/progression.ts) is pure TypeScript with full tests. It uses **double progression**: stay at a weight until you hit the top of the rep range on every set, then add weight.

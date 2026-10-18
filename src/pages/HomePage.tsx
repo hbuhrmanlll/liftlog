@@ -6,7 +6,11 @@ import { MuscleVolume } from '../components/MuscleVolume';
 import { Button, Card, cx, DayBadge, dayStyles, RecBadge, SectionTitle, Stat } from '../components/ui';
 import { setKv, startWorkout } from '../db/repo';
 import { latestBodyweight, useActiveWorkout, useBodyweight, useCardio, useKv, useProgram, useSettings, useWorkouts } from '../hooks/useData';
-import { completedWorkouts, DAY_MS, weeklyStats, weekStreak } from '../lib/calculations';
+import { completedWorkouts, DAY_MS, startOfWeek, weeklyStats, weekStreak } from '../lib/calculations';
+import { bodyStats, cardioCalories, workoutCalories } from '../lib/calories';
+import { WEEKDAYS, weighInDue } from '../lib/weighIn';
+import { WeighInForm } from '../components/WeighInForm';
+import { useProfile } from '../hooks/profile';
 import { formatCompact, formatDate, formatDuration, relativeDay } from '../lib/format';
 import { programRecommendations, recentPRs } from '../lib/insights';
 import { deloadReminderWeeks, formatLoad } from '../lib/progression';
@@ -15,7 +19,7 @@ import { DAY_TYPES, type DayType } from '../types';
 
 function greeting(): string {
   const h = new Date().getHours();
-  if (h < 5) return 'Late session?';
+  if (h < 5) return 'Up late';
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
@@ -37,6 +41,16 @@ export function HomePage() {
   const next = nextDay(workouts);
   const dayExercises = program.filter((e) => e.day === next);
   const stats = useMemo(() => weeklyStats(workouts, cardio, now, latestBodyweight(bodyweight)), [workouts, cardio, bodyweight, now]);
+  const { profile } = useProfile();
+  const weekCalories = useMemo(() => {
+    const s = bodyStats(settings, latestBodyweight(bodyweight));
+    const from = startOfWeek(now);
+    const lift = workouts.filter((w) => w.status === 'completed' && w.startedAt >= from).map((w) => workoutCalories(w, s));
+    const cardioK = cardio.filter((c) => c.date >= from).map((c) => cardioCalories(c, s));
+    const all = [...lift, ...cardioK];
+    return all.some((k) => k === null) && all.every((k) => k === null) ? null : all.reduce<number>((t, k) => t + (k ?? 0), 0);
+  }, [settings, bodyweight, workouts, cardio, now]);
+  const weighIn = settings.weighInReminders && weighInDue(bodyweight, settings.weighInDay, now) && new Date(now).getDay() === settings.weighInDay ? 'today' : settings.weighInReminders && weighInDue(bodyweight, settings.weighInDay, now) && bodyweight.length > 0 ? 'overdue' : settings.weighInReminders && bodyweight.length === 0 ? 'first' : null;
   const streak = useMemo(() => weekStreak(workouts, now), [workouts, now]);
   const prs = useMemo(() => recentPRs(workouts, settings.units, now - 14 * DAY_MS).slice(0, 4), [workouts, settings.units, now]);
   const recs = useMemo(() => programRecommendations(program, workouts, settings), [program, workouts, settings]);
@@ -56,7 +70,9 @@ export function HomePage() {
       <header className="flex items-end justify-between pt-2">
         <div>
           <p className="text-[13px] font-medium text-ink-3">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-          <h1 className="mt-0.5 text-[28px] font-bold tracking-tight">{greeting()}</h1>
+          <h1 className="mt-0.5 text-[28px] font-bold tracking-tight">
+            {greeting()}, {profile.displayName.split(' ')[0]}
+          </h1>
         </div>
         {streak > 0 && (
           <div className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-[13px] font-semibold ring-1 ring-line" title="Weeks in a row with at least one workout">
@@ -135,6 +151,21 @@ export function HomePage() {
       )}
 
       {/* Alerts */}
+      {weighIn && (
+        <Card className="space-y-3 border-accent/40 p-4">
+          <div>
+            <p className="font-semibold text-ink">{weighIn === 'first' ? 'Start your weight tracker' : weighIn === 'today' ? `It's ${WEEKDAYS[settings.weighInDay]}: weekly weigh-in` : 'Weekly weigh-in is due'}</p>
+            <p className="mt-0.5 text-[13px] text-ink-3">
+              {weighIn === 'first' ? 'Log your weight once a week to see your trend next to your strength.' : 'Same time of day as last week, ideally in the morning before eating.'}{' '}
+              <Link to="/progress?tab=weight" className="font-semibold text-accent hover:underline">
+                Weight tracker
+              </Link>
+            </p>
+          </div>
+          <WeighInForm compact />
+        </Card>
+      )}
+
       {(deloadWeeks > 0 || stalled.length > 0) && (
         <div className="space-y-3">
           {deloadWeeks > 0 && (
@@ -168,7 +199,7 @@ export function HomePage() {
         <Card className="grid grid-cols-2 gap-x-4 gap-y-5 p-5 sm:grid-cols-4">
           <Stat label="Workouts" value={`${stats.workouts}/${settings.schedule}`} sub={stats.workouts >= settings.schedule ? 'Goal hit' : `${settings.schedule - stats.workouts} to go`} />
           <Stat label="Volume" value={formatCompact(stats.volume)} sub={settings.units} />
-          <Stat label="Sets" value={stats.sets} sub="working sets" />
+          <Stat label="Calories" value={weekCalories === null ? '-' : formatCompact(weekCalories)} sub={weekCalories === null ? <Link to="/settings#profile" className="text-accent">add your weight</Link> : 'kcal burned (est.)'} />
           <Stat label="Cardio" value={`${stats.cardioMinutes}`} sub={`min · ${stats.cardioSessions} session${stats.cardioSessions === 1 ? '' : 's'}`} />
         </Card>
       </section>
