@@ -1,0 +1,23 @@
+export function LogoMark({ className = 'size-8' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} aria-hidden>
+      <rect width="64" height="64" rx="16" fill="#C6F432" />
+      <g fill="#0A0B0D">
+        <rect x="10" y="22" width="7" height="20" rx="2.5" />
+        <rect x="18.5" y="17" width="7" height="30" rx="2.5" />
+        <rect x="38.5" y="17" width="7" height="30" rx="2.5" />
+        <rect x="47" y="22" width="7" height="20" rx="2.5" />
+        <rect x="25" y="29" width="14" height="6" rx="2" />
+      </g>
+    </svg>
+  );
+}
+
+export function Logo() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <LogoMark />
+      <span className="text-xl font-bold tracking-tight text-ink">LiftLog</span>
+    </div>
+  );
+}

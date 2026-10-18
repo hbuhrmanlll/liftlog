@@ -1,0 +1,231 @@
+@import '@fontsource-variable/inter';
+@import 'tailwindcss';
+
+/* Dark is the default; .light on <html> switches themes. */
+@custom-variant light (&:where(.light, .light *));
+
+:root {
+  --bg: #0a0b0d;
+  --surface: #15171b;
+  --surface-2: #1d2025;
+  --surface-3: #262a31;
+  --border: #2a2e35;
+  --text: #f4f5f7;
+  --text-2: #a8aeb8;
+  --text-3: #767d88;
+  --accent: #c6f432;
+  --accent-hover: #d4fa5c;
+  --accent-ink: #0b0d02;
+  --accent-soft: rgb(198 244 50 / 0.12);
+  --push: #e8650f;
+  --pull: #3b82f6;
+  --legs: #10a374;
+  --push-soft: rgb(232 101 15 / 0.14);
+  --pull-soft: rgb(59 130 246 / 0.14);
+  --legs-soft: rgb(16 163 116 / 0.14);
+  --up: #22c55e;
+  --up-soft: rgb(34 197 94 / 0.14);
+  --stay: #60a5fa;
+  --stay-soft: rgb(96 165 250 / 0.14);
+  --down: #f59e0b;
+  --down-soft: rgb(245 158 11 / 0.15);
+  --danger: #f87171;
+  --danger-soft: rgb(248 113 113 / 0.14);
+  --grid: #24272d;
+  --seg-active: #3a404a;
+  color-scheme: dark;
+}
+
+:root.light {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --surface-3: #e5e7eb;
+  --border: #e3e5e8;
+  --text: #111317;
+  --text-2: #4b5260;
+  --text-3: #6b7280;
+  --accent: #4d7c0f;
+  --accent-hover: #3f6212;
+  --accent-ink: #ffffff;
+  --accent-soft: rgb(77 124 15 / 0.1);
+  --push: #ea580c;
+  --pull: #2563eb;
+  --legs: #059669;
+  --push-soft: rgb(234 88 12 / 0.1);
+  --pull-soft: rgb(37 99 235 / 0.1);
+  --legs-soft: rgb(5 150 105 / 0.1);
+  --up: #15803d;
+  --up-soft: rgb(21 128 61 / 0.1);
+  --stay: #1d4ed8;
+  --stay-soft: rgb(29 78 216 / 0.1);
+  --down: #b45309;
+  --down-soft: rgb(180 83 9 / 0.12);
+  --danger: #dc2626;
+  --danger-soft: rgb(220 38 38 / 0.08);
+  --grid: #eceef1;
+  --seg-active: #ffffff;
+  color-scheme: light;
+}
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-push: var(--push);
+  --color-pull: var(--pull);
+  --color-legs: var(--legs);
+  --color-push-soft: var(--push-soft);
+  --color-pull-soft: var(--pull-soft);
+  --color-legs-soft: var(--legs-soft);
+  --color-up: var(--up);
+  --color-up-soft: var(--up-soft);
+  --color-stay: var(--stay);
+  --color-stay-soft: var(--stay-soft);
+  --color-down: var(--down);
+  --color-down-soft: var(--down-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-seg: var(--seg-active);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+body {
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+/* Tabular numbers everywhere numbers matter. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.28s ease-out both;
+}
+
+@keyframes pr-pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-pr {
+  animation: pr-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.pr-shine {
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.12) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer 2.4s ease-in-out 0.4s 2;
+}
+
+@keyframes typing {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+.typing-dot {
+  animation: typing 1.2s infinite ease-in-out;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-sheet {
+  animation: sheet-up 0.22s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
