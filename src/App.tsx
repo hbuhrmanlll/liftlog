@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { RestTimerProvider } from './hooks/restTimer';
 import { ToastProvider } from './hooks/toast';
 import { useSettingsLoaded } from './hooks/useData';
@@ -16,6 +17,14 @@ const ExerciseDetailPage = lazy(() => import('./pages/ExerciseDetailPage').then(
 const ProgressPage = lazy(() => import('./pages/ProgressPage').then((m) => ({ default: m.ProgressPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const ProgramPage = lazy(() => import('./pages/ProgramPage').then((m) => ({ default: m.ProgramPage })));
+
+function PageLoading() {
+  return (
+    <div className="flex min-h-[50dvh] items-center justify-center" aria-busy="true" aria-label="Loading">
+      <span className="size-6 animate-spin rounded-full border-2 border-ink-3 border-r-transparent" />
+    </div>
+  );
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -51,21 +60,23 @@ export default function App() {
           <OnboardingPage />
         ) : (
           <AppShell>
-            <Suspense fallback={<div className="min-h-[50dvh]" aria-busy="true" />}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/workout" element={<WorkoutPage />} />
-                <Route path="/workout/summary/:id" element={<SummaryPage />} />
-                <Route path="/coach" element={<CoachPage />} />
-                <Route path="/history" element={<HistoryPage />} />
-                <Route path="/history/:id" element={<WorkoutDetailPage />} />
-                <Route path="/progress" element={<ProgressPage />} />
-                <Route path="/exercise/:id" element={<ExerciseDetailPage />} />
-                <Route path="/program" element={<ProgramPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
+            <ErrorBoundary resetKey={pathname}>
+              <Suspense fallback={<PageLoading />}>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/workout" element={<WorkoutPage />} />
+                  <Route path="/workout/summary/:id" element={<SummaryPage />} />
+                  <Route path="/coach" element={<CoachPage />} />
+                  <Route path="/history" element={<HistoryPage />} />
+                  <Route path="/history/:id" element={<WorkoutDetailPage />} />
+                  <Route path="/progress" element={<ProgressPage />} />
+                  <Route path="/exercise/:id" element={<ExerciseDetailPage />} />
+                  <Route path="/program" element={<ProgramPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
           </AppShell>
         )}
       </RestTimerProvider>

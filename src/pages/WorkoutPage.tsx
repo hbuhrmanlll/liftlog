@@ -16,7 +16,12 @@ import { DAY_TYPES, type DayType, type Workout, type WorkoutExercise } from '../
 
 export function WorkoutPage() {
   const active = useActiveWorkout();
-  if (active === undefined) return <div aria-busy="true" />;
+  if (active === undefined)
+    return (
+      <div className="flex min-h-[50dvh] items-center justify-center" aria-busy="true" aria-label="Loading workout">
+        <span className="size-6 animate-spin rounded-full border-2 border-ink-3 border-r-transparent" />
+      </div>
+    );
   if (active === null) return <StartWorkout />;
   return <ActiveWorkout key={active.id} initial={active} />;
 }

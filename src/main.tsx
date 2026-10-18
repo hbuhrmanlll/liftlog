@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ensureSeeded } from './db/repo';
 import './index.css';
 
@@ -20,9 +21,11 @@ ensureSeeded()
   .finally(() => {
     createRoot(document.getElementById('root')!).render(
       <StrictMode>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <ErrorBoundary>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ErrorBoundary>
       </StrictMode>,
     );
   });
