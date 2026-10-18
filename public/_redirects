@@ -1,4 +1,8 @@
-# Netlify: send AI Coach requests to the serverless function, and every other
-# path to the app so links like /workout work when opened or refreshed.
-/api/*  /.netlify/functions/coach  200
-/*      /index.html                200
+# Netlify rules, applied only when no real file matches.
+# AI Coach requests go to the serverless function.
+/api/*     /.netlify/functions/coach  200
+# A missing app file (old version after a deploy) must be a real 404, not the
+# homepage, so the app can notice and reload instead of crashing.
+/assets/*  /404.html                  404
+# Every other path is a page in the app (/workout, /history, ...).
+/*         /index.html                200

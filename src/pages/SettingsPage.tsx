@@ -9,6 +9,7 @@ import { useCoachAvailability } from '../hooks/useCoach';
 import { useSettings } from '../hooks/useData';
 import { parseBackup, workoutsToCsv, type BackupFile } from '../lib/backup';
 import { getAccessCode, setAccessCode } from '../lib/coachClient';
+import { clearCrash, lastCrash } from '../lib/crashLog';
 import { LOAD_DEFAULTS } from '../lib/defaults';
 import { formatClock } from '../lib/format';
 import type { Goal, Schedule, Units } from '../types';
@@ -59,6 +60,7 @@ export function SettingsPage() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [restChanged, setRestChanged] = useState(false);
   const [code, setCode] = useState(getAccessCode);
+  const [crash, setCrash] = useState(lastCrash);
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
@@ -338,6 +340,30 @@ export function SettingsPage() {
           </Button>
         </div>
       </Group>
+
+      {crash && (
+        <Group title="Diagnostics">
+          <div className="py-3.5">
+            <p className="mb-2 text-[13px] text-ink-3">Last error ({new Date(crash.at).toLocaleString()}). Copy it and send it to whoever helps you with the app.</p>
+            <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-2 p-3 text-[12px] text-ink-2 select-all">{crash.details}</pre>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" onClick={() => void navigator.clipboard?.writeText(crash.details).then(() => toast('Copied'))}>
+                Copy
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  clearCrash();
+                  setCrash(null);
+                }}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+        </Group>
+      )}
 
       <p className="pb-4 text-center text-[12px] text-ink-3">LiftLog 1.0 · Data stays on your device</p>
 
