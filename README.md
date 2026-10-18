@@ -1,6 +1,6 @@
 # LiftLog
 
-A fast, offline-first Push / Pull / Legs workout tracker. It shows you exactly what to lift, lets you log every set in a tap or two, and tells you after each workout whether to go **up**, **stay**, or go **down** next time. There's an optional AI Coach powered by Claude.
+A fast, offline-first Push / Pull / Legs workout tracker. It shows you exactly what to lift, lets you log every set in a tap or two, and tells you after each workout whether to go **up**, **stay**, or go **down** next time. There's an optional AI Coach powered by Google Gemini (free tier) or Anthropic Claude.
 
 - **No account, no backend for your data.** Everything is stored on your device (IndexedDB).
 - **Installs on your phone** and works offline (PWA).
@@ -44,7 +44,7 @@ The app is static, plus one small serverless function (`api/coach.ts`) that hold
 1. Push this folder to a GitHub repository.
 2. Go to [vercel.com](https://vercel.com), sign in with GitHub, click **Add New → Project**, and import the repo. Vercel detects Vite automatically (settings are in `vercel.json`). Click **Deploy**.
 3. *(Optional, for the AI Coach)* In the project, open **Settings → Environment Variables** and add:
-   - `ANTHROPIC_API_KEY`: your key (see below).
+   - `GEMINI_API_KEY` (free) or `ANTHROPIC_API_KEY` (paid): your key (see below).
    - `COACH_ACCESS_CODE`: any password you choose. **Recommended**, because without it anyone who finds your URL could use your API credits.
 
    Then go to **Deployments**, open the latest one, and click **Redeploy** so the variables take effect.
@@ -57,7 +57,7 @@ LiftLog then opens full-screen from your home screen and works offline. If you s
 
 ### Deploying on Netlify instead
 
-Netlify works too: **Add new site → Import an existing project →** pick the repo **→ Deploy** (settings come from `netlify.toml`, and `public/_redirects` makes links like `/workout` work). Add `ANTHROPIC_API_KEY` / `COACH_ACCESS_CODE` under **Site configuration → Environment variables**, then **Deploys → Trigger deploy**. Netlify functions have a shorter time limit than Vercel's, so very long AI Coach answers can occasionally get cut off; everything else is identical.
+Netlify works too: **Add new site → Import an existing project →** pick the repo **→ Deploy** (settings come from `netlify.toml`, and `public/_redirects` makes links like `/workout` work). Add `GEMINI_API_KEY` (or `ANTHROPIC_API_KEY`) and `COACH_ACCESS_CODE` under **Site configuration → Environment variables**, then **Deploys → Trigger deploy**. Netlify functions have a shorter time limit than Vercel's, so very long AI Coach answers can occasionally get cut off; everything else is identical.
 
 > Your workout data lives on the device you log it on. Use **Settings → Export backup** regularly, and **Import backup** to move data to a new phone.
 
@@ -65,24 +65,32 @@ Netlify works too: **Add new site → Import an existing project →** pick the 
 
 ## AI Coach setup
 
-The AI Coach is optional. Without a key, everything else works and AI features show "Set up AI Coach in Settings".
+The AI Coach is optional. Without a key, everything else works and AI features show "Set up AI Coach in Settings". It supports two providers. Set **one** key:
 
-1. **Get an API key:** create an account at [console.anthropic.com](https://console.anthropic.com), add billing/credits, then go to **Settings → API Keys → Create Key**. Copy it (it starts with `sk-ant-`).
-2. **Local development:** copy `.env.example` to `.env.local` and paste your key:
+| Provider | Cost | Variable | Get a key |
+| --- | --- | --- | --- |
+| **Google Gemini** (Flash) | Free tier, no credit card, daily request limits | `GEMINI_API_KEY` | https://aistudio.google.com/apikey |
+| **Anthropic Claude** (Sonnet) | Pay as you go, higher-quality answers | `ANTHROPIC_API_KEY` | https://console.anthropic.com/settings/keys |
 
-   ```bash
-   cp .env.example .env.local
-   # edit .env.local:
-   ANTHROPIC_API_KEY=sk-ant-...
-   COACH_ACCESS_CODE=         # optional locally
-   ```
+If only `GEMINI_API_KEY` is set, Gemini is used automatically. If both are set, Claude is used unless you add `COACH_PROVIDER=gemini`. `GEMINI_MODEL` overrides the default Gemini model (`gemini-flash-latest`). On the free tier, if you hit Google's daily limit, the coach says it's busy until the limit resets. Note that Google may use free-tier prompts (which include your training summary) to improve its products.
 
-   Restart `npm run dev`. The dev server serves `/api/coach` using the same handler as the Vercel function. `.env.local` is git-ignored.
-3. **Production:** set the same variables in Vercel (step 3 above).
+**Get a free Gemini key:** go to https://aistudio.google.com/apikey, sign in with a Google account, click **Create API key**, and copy it (it starts with `AIza`).
 
-**Security:** the key is only read on the server (`server/coachHandler.ts`). It is never sent to the browser or bundled into the app (it has no `VITE_` prefix). The browser only talks to `/api/coach`, which accepts a narrow, validated request shape.
+**Local development:** copy `.env.example` to `.env.local` and paste your key:
 
-**Model:** the coach uses `claude-sonnet-5-5`. To change it, edit `COACH_MODEL` in [`shared/coach.ts`](shared/coach.ts). The coach's rules (system prompt) and the JSON schemas for structured answers live in the same file. Requests use adaptive thinking and streaming, and enable Anthropic's server-side refusal fallback; if your account rejects that beta, the server automatically retries without it.
+```bash
+cp .env.example .env.local
+# edit .env.local:
+GEMINI_API_KEY=AIza...
+```
+
+Restart `npm run dev`. The dev server serves `/api/coach` using the same handler as the deployed function. `.env.local` is git-ignored.
+
+**Production:** add the same variable on your host (Netlify: **Site configuration → Environment variables**, then **Deploys → Trigger deploy**; Vercel: **Settings → Environment Variables**, then **Redeploy**). Also add `COACH_ACCESS_CODE` so only you can use your key.
+
+**Security:** keys are only read on the server (`server/coachEnv.ts`). They are never sent to the browser or bundled into the app (they have no `VITE_` prefix). The browser only talks to `/api/coach`, which accepts a narrow, validated request shape.
+
+**Models and prompts:** the Claude model is `COACH_MODEL` in [`shared/coach.ts`](shared/coach.ts), which also holds the coach's rules (system prompt) and the JSON schemas for structured answers. Both providers get the same rules and data. The Gemini client is [`server/gemini.ts`](server/gemini.ts).
 
 What the coach does:
 - **Ask Coach** (workout summary and exercise pages): a second opinion on next session's weight. The rule-based engine stays the default. If the AI disagrees, you see both and pick one. The app never changes your weights on its own, and it caps any AI suggestion at the engine's normal increment.
@@ -114,8 +122,9 @@ All weights are rounded to what you can actually load, using your barbell, plate
 ## Project structure
 
 ```
-api/coach.ts            Vercel serverless function (holds ANTHROPIC_API_KEY)
-server/                 Coach request handler + Vite dev/preview middleware
+api/coach.ts            Vercel serverless function (holds your API key)
+netlify/functions/      Netlify version of the same function
+server/                 Coach request handler (Claude + Gemini) + Vite dev/preview middleware
 shared/coach.ts         Model name, coach system prompt, JSON schemas (server + app)
 src/
   components/           UI building blocks (set logger, charts, coach widgets, ...)

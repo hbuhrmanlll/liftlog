@@ -6,7 +6,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Connect, Plugin } from 'vite';
 import { COACH_ENDPOINT } from '../shared/coach.js';
-import { handleCoachRequest } from './coachHandler.js';
+import { handleCoachRequest, type HandlerOptions } from './coachHandler.js';
 
 async function toWebRequest(req: IncomingMessage): Promise<Request> {
   const chunks: Buffer[] = [];
@@ -45,12 +45,12 @@ async function sendWebResponse(res: ServerResponse, response: Response): Promise
   res.end();
 }
 
-export function coachDevApi(getKey: () => string | undefined, getAccessCode: () => string | undefined = () => undefined): Plugin {
+export function coachDevApi(getOptions: () => HandlerOptions): Plugin {
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
     const path = (req.url ?? '').split('?')[0];
     if (path !== COACH_ENDPOINT) return next();
     toWebRequest(req)
-      .then((request) => handleCoachRequest(request, { apiKey: getKey(), accessCode: getAccessCode() }))
+      .then((request) => handleCoachRequest(request, getOptions()))
       .then((response) => sendWebResponse(res, response))
       .catch((err: unknown) => {
         res.statusCode = 500;

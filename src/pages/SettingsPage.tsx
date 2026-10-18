@@ -1,7 +1,6 @@
 import { Bot, CheckCircle2, ChevronRight, Download, FileSpreadsheet, ListChecks, Moon, RefreshCw, Sun, Trash2, Upload, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { COACH_MODEL } from '../../shared/coach';
 import { Button, Card, ConfirmDialog, cx, PageHeader, Segmented, Spinner, Stepper, TextField, Toggle } from '../components/ui';
 import { db } from '../db/db';
 import { changeUnits, exportAll, getProgram, importAll, resetAll, updateExercise, updateSettings } from '../db/repo';
@@ -291,23 +290,28 @@ export function SettingsPage() {
                 </p>
                 <ol className="list-decimal space-y-1.5 pl-4">
                   <li>
-                    Get an API key at{' '}
+                    Get a <strong className="text-ink">free</strong> Google Gemini key at{' '}
+                    <a className="font-medium text-accent hover:underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">
+                      aistudio.google.com/apikey
+                    </a>{' '}
+                    (no credit card). Or use a paid Claude key from{' '}
                     <a className="font-medium text-accent hover:underline" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">
                       console.anthropic.com
                     </a>
                     .
                   </li>
                   <li>
-                    <strong className="text-ink">Running on your computer:</strong> put <code className="rounded bg-surface-3 px-1">ANTHROPIC_API_KEY=your-key</code> in a file named <code className="rounded bg-surface-3 px-1">.env.local</code> in the project folder, then restart <code className="rounded bg-surface-3 px-1">npm run dev</code>.
+                    <strong className="text-ink">On Netlify:</strong> Site configuration → Environment variables → add <code className="rounded bg-surface-3 px-1">GEMINI_API_KEY</code>, then Deploys → Trigger deploy.{' '}
+                    <strong className="text-ink">On Vercel:</strong> Project → Settings → Environment Variables → same name, then redeploy.
                   </li>
                   <li>
-                    <strong className="text-ink">Deployed on Vercel:</strong> Project → Settings → Environment Variables → add <code className="rounded bg-surface-3 px-1">ANTHROPIC_API_KEY</code>, then redeploy.
+                    <strong className="text-ink">Running on your computer:</strong> put <code className="rounded bg-surface-3 px-1">GEMINI_API_KEY=your-key</code> in a file named <code className="rounded bg-surface-3 px-1">.env.local</code> in the project folder, then restart <code className="rounded bg-surface-3 px-1">npm run dev</code>.
                   </li>
                   <li>
                     Recommended when deployed: also add <code className="rounded bg-surface-3 px-1">COACH_ACCESS_CODE</code> (any password) so only you can use your key, and enter the same code above.
                   </li>
                 </ol>
-                <p className="mt-2 text-ink-3">The key stays on the server and is never sent to your phone. Model: {COACH_MODEL}. Everything else in LiftLog works without it.</p>
+                <p className="mt-2 text-ink-3">The key stays on the server and is never sent to your phone. Everything else in LiftLog works without it.</p>
               </div>
             )}
           </div>

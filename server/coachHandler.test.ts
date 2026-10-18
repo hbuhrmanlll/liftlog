@@ -14,7 +14,7 @@ describe('coach handler', () => {
   it('GET reports whether a key is configured, never the key', async () => {
     const res = await handleCoachRequest(new Request('http://x/api/coach'), { apiKey: 'sk-ant-secret' });
     const data = await res.json();
-    expect(data).toEqual({ configured: true, model: COACH_MODEL, requiresCode: false, authorized: true });
+    expect(data).toEqual({ configured: true, model: COACH_MODEL, provider: 'anthropic', requiresCode: false, authorized: true });
     expect(JSON.stringify(data)).not.toContain('secret');
     const res2 = await handleCoachRequest(new Request('http://x/api/coach'), { apiKey: undefined });
     expect((await res2.json()).configured).toBe(false);
