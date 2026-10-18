@@ -55,6 +55,10 @@ The app is static, plus one small serverless function (`api/coach.ts`) that hold
 
 LiftLog then opens full-screen from your home screen and works offline. If you set `COACH_ACCESS_CODE`, open **Settings → AI Coach** in the app and enter the same code once on each device.
 
+### Deploying on Netlify instead
+
+Netlify works too: **Add new site → Import an existing project →** pick the repo **→ Deploy** (settings come from `netlify.toml`, and `public/_redirects` makes links like `/workout` work). Add `ANTHROPIC_API_KEY` / `COACH_ACCESS_CODE` under **Site configuration → Environment variables**, then **Deploys → Trigger deploy**. Netlify functions have a shorter time limit than Vercel's, so very long AI Coach answers can occasionally get cut off; everything else is identical.
+
 > Your workout data lives on the device you log it on. Use **Settings → Export backup** regularly, and **Import backup** to move data to a new phone.
 
 ---

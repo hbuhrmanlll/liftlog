@@ -1,0 +1,4 @@
+# Netlify: send AI Coach requests to the serverless function, and every other
+# path to the app so links like /workout work when opened or refreshed.
+/api/*  /.netlify/functions/coach  200
+/*      /index.html                200
