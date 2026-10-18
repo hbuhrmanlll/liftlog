@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { execSync } from 'node:child_process';
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { coachOptionsFromEnv } from './server/coachEnv.ts';
@@ -11,8 +12,19 @@ export default defineConfig(({ mode }) => {
   // They are not prefixed with VITE_, so they are never bundled into the app.
   const env = loadEnv(mode, process.cwd(), '');
   const getOptions = () => coachOptionsFromEnv({ ...process.env, ...env });
+  // Short commit id shown in Settings and error reports (Netlify sets COMMIT_REF).
+  let commit = process.env.COMMIT_REF ?? '';
+  if (!commit) {
+    try {
+      commit = execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    } catch {
+      commit = 'dev';
+    }
+  }
+  const version = `${commit.slice(0, 7)} · ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 
   return {
+    define: { __APP_VERSION__: JSON.stringify(version) },
     plugins: [
       react(),
       tailwindcss(),

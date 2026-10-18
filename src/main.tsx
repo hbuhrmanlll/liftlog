@@ -6,7 +6,17 @@ import { recordCrash, reloadOnce } from './lib/crashLog';
 import './index.css';
 import { Root } from './Root';
 
-registerSW({ immediate: true });
+// Check for a new version at startup, whenever the app comes back to the foreground,
+// and every 30 minutes; with autoUpdate the new version activates and reloads itself.
+registerSW({
+  immediate: true,
+  onRegisteredSW(_url, registration) {
+    if (!registration) return;
+    const check = () => void registration.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
+    window.setInterval(check, 30 * 60_000);
+  },
+});
 
 // After a new deploy, an already-open copy can ask for files that no longer exist.
 // Vite reports that here; reloading picks up the new version.

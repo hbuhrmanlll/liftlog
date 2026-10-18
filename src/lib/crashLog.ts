@@ -11,7 +11,7 @@ export interface CrashRecord {
 export function describeError(error: unknown): string {
   const e = error instanceof Error ? error : new Error(String(error));
   const stack = (e.stack ?? '').split('\n').slice(0, 6).join('\n');
-  return `${e.name}: ${e.message}\n${stack}\n\nApp path: ${location.pathname}\n${navigator.userAgent}`;
+  return `${e.name}: ${e.message}\n${stack}\n\nApp version: ${__APP_VERSION__}\nApp path: ${location.pathname}\n${navigator.userAgent}`;
 }
 
 export function recordCrash(error: unknown): CrashRecord {

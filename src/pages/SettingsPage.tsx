@@ -375,7 +375,7 @@ export function SettingsPage() {
         </Group>
       )}
 
-      <p className="pb-4 text-center text-[12px] text-ink-3">LiftLog 1.0 · Data stays on your device</p>
+      <p className="pb-4 text-center text-[12px] text-ink-3">LiftLog version {__APP_VERSION__} · Data stays on your device</p>
 
       <ConfirmDialog
         open={pendingUnits !== null}
