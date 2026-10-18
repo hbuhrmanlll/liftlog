@@ -28,7 +28,11 @@ function PageLoading() {
 
 function ScrollToTop() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // Braces matter: newer browsers return a Promise from scrollTo, and an effect must
+  // return either nothing or a cleanup function (React calls whatever is returned).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   return null;
 }
 
