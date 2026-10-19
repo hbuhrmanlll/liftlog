@@ -63,7 +63,13 @@ jobs:
               -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEYSTORE_PASSWORD" -dname "CN=LiftLog"
           fi
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
+          if ! ./gradlew --no-daemon assembleRelease > "$RUNNER_TEMP/gradle.log" 2>&1; then
+            # Surface the Gradle error as an annotation so it shows on the commit's checks.
+            msg=$(grep -A25 "What went wrong" "$RUNNER_TEMP/gradle.log" || tail -40 "$RUNNER_TEMP/gradle.log")
+            echo "::error title=Gradle build failed::$(echo "$msg" | head -c 3500 | sed ':a;N;$!ba;s/\n/%0A/g')"
+            tail -60 "$RUNNER_TEMP/gradle.log"
+            exit 1
+          fi
           cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/LiftLog.apk"
       - name: Publish release
         env:
