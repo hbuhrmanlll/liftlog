@@ -94,8 +94,18 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// The Android app and GitHub Pages call this function from another origin. No cookies
+// are involved (the access code is a header), so allowing any origin adds no exposure
+// beyond the endpoint being public.
+const CORS_HEADERS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
+  'access-control-allow-headers': `content-type, ${ACCESS_CODE_HEADER}`,
+  'access-control-max-age': '86400',
+};
+
 function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+  return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...CORS_HEADERS } });
 }
 
 export type CoachErrorCode = 'locked' | 'not_configured' | 'bad_request' | 'auth' | 'rate_limited' | 'refused' | 'upstream' | 'overloaded';
@@ -138,6 +148,7 @@ export async function handleCoachRequest(req: Request, opts: HandlerOptions): Pr
   const model = provider === 'gemini' ? opts.model?.trim() || GEMINI_DEFAULT_MODEL : COACH_MODEL;
   const required = opts.accessCode?.trim();
   const authorized = !required || safeEqual(req.headers.get(ACCESS_CODE_HEADER)?.trim() ?? '', required);
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method === 'GET') return json({ configured: Boolean(apiKey), model, provider, requiresCode: Boolean(required), authorized });
   if (req.method !== 'POST') return json({ error: 'Method not allowed', code: 'bad_request' }, 405);
   if (!apiKey) return json({ error: 'AI Coach is not set up. Add GEMINI_API_KEY (or ANTHROPIC_API_KEY) on the server.', code: 'not_configured' }, 503);
@@ -206,6 +217,6 @@ export async function handleCoachRequest(req: Request, opts: HandlerOptions): Pr
   });
   return new Response(stream, {
     status: 200,
-    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' },
+    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no', ...CORS_HEADERS },
   });
 }

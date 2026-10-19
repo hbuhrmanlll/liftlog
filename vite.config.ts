@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const getOptions = () => coachOptionsFromEnv({ ...process.env, ...env });
   // Short commit id shown in Settings and error reports (Netlify sets COMMIT_REF).
-  let commit = process.env.COMMIT_REF ?? '';
+  let commit = process.env.COMMIT_REF ?? process.env.GITHUB_SHA ?? '';
   if (!commit) {
     try {
       commit = execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
@@ -21,9 +21,12 @@ export default defineConfig(({ mode }) => {
       commit = 'dev';
     }
   }
+  // GitHub Pages serves the app from /<repo>/; Netlify, Vercel and the Android app use /.
+  const base = process.env.BASE_PATH ?? '/';
   const version = `${commit.slice(0, 7)} · ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 
   return {
+    base,
     define: { __APP_VERSION__: JSON.stringify(version) },
     plugins: [
       react(),
@@ -40,8 +43,8 @@ export default defineConfig(({ mode }) => {
           background_color: '#0a0b0d',
           display: 'standalone',
           orientation: 'portrait',
-          start_url: '/',
-          scope: '/',
+          start_url: base,
+          scope: base,
           categories: ['health', 'fitness', 'sports'],
           icons: [
             { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
@@ -51,8 +54,8 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
-          navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/api\//],
+          navigateFallback: `${base}index.html`,
+          navigateFallbackDenylist: [/\/api\//],
           cleanupOutdatedCaches: true,
         },
       }),

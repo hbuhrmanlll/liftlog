@@ -35,7 +35,7 @@ export function Root() {
   const signOut = useCallback(() => {
     setActiveProfileId(null);
     // A full reload clears every in-memory query, timer and cache of the previous person.
-    window.location.assign('/');
+    window.location.assign(import.meta.env.BASE_URL);
   }, []);
 
   if (state.status === 'loading') return <div className="min-h-dvh bg-bg" aria-busy="true" />;
@@ -53,7 +53,7 @@ export function Root() {
         },
       }}
     >
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <App key={profile.id} />
       </BrowserRouter>
     </ProfileContext.Provider>

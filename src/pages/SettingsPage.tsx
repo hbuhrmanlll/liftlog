@@ -1,4 +1,4 @@
-import { Bot, CheckCircle2, ChevronRight, Download, FileSpreadsheet, ListChecks, Moon, RefreshCw, Sun, Trash2, Upload, XCircle } from 'lucide-react';
+import { Bot, CheckCircle2, ChevronRight, Download, FileSpreadsheet, ListChecks, Moon, RefreshCw, Smartphone, Sun, Trash2, Upload, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ProfileSettings } from '../components/ProfileSettings';
@@ -13,6 +13,7 @@ import { getAccessCode, setAccessCode } from '../lib/coachClient';
 import { clearCrash, lastCrash } from '../lib/crashLog';
 import { LOAD_DEFAULTS } from '../lib/defaults';
 import { formatClock } from '../lib/format';
+import { ANDROID_APK_URL, isNativeApp, saveTextFile } from '../lib/platform';
 import type { Goal, Schedule, Units } from '../types';
 
 const ALL_PLATES: Record<Units, number[]> = { lb: [55, 45, 35, 25, 10, 5, 2.5, 1.25], kg: [25, 20, 15, 10, 5, 2.5, 2, 1.25, 1, 0.5] };
@@ -38,17 +39,6 @@ function Row({ label, hint, children }: { label: string; hint?: ReactNode; child
   );
 }
 
-function download(name: string, content: string, type: string) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 export function SettingsPage() {
   const s = useSettings();
@@ -70,14 +60,14 @@ export function SettingsPage() {
 
   const exportJson = async () => {
     const backup = await exportAll();
-    download(`liftlog-backup-${today}.json`, JSON.stringify(backup, null, 2), 'application/json');
-    toast('Backup downloaded');
+    await saveTextFile(`liftlog-backup-${today}.json`, JSON.stringify(backup, null, 2), 'application/json');
+    if (!isNativeApp) toast('Backup downloaded');
   };
 
   const exportCsv = async () => {
     const [workouts, cardio] = await Promise.all([db.workouts.toArray(), db.cardio.toArray()]);
-    download(`liftlog-history-${today}.csv`, workoutsToCsv(workouts, cardio, s.units), 'text/csv');
-    toast('CSV downloaded');
+    await saveTextFile(`liftlog-history-${today}.csv`, workoutsToCsv(workouts, cardio, s.units), 'text/csv');
+    if (!isNativeApp) toast('CSV downloaded');
   };
 
   const onFile = async (file: File | undefined) => {
@@ -329,6 +319,22 @@ export function SettingsPage() {
           </div>
         )}
       </Group>
+
+      {!isNativeApp && (
+        <Group title="Android app">
+          <div className="py-3.5">
+            <p className="mb-3 text-[13px] text-ink-3">
+              Install LiftLog as an app on an Android phone. The app keeps its own data, so to bring this profile's workouts along, Export backup below and then Import backup in the app.
+            </p>
+            <a
+              href={ANDROID_APK_URL}
+              className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-[15px] font-medium text-ink transition-colors hover:bg-surface-3"
+            >
+              <Smartphone className="size-4" aria-hidden /> Download the Android app (APK)
+            </a>
+          </div>
+        </Group>
+      )}
 
       <Group title="Your data">
         <div className="space-y-2 py-3.5">

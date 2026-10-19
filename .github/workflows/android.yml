@@ -1,0 +1,75 @@
+# Builds the Android app (APK) and publishes it as a GitHub release.
+# Download link that always points at the newest build:
+#   https://github.com/<user>/<repo>/releases/latest/download/LiftLog.apk
+#
+# Signing: add two repository secrets (Settings -> Secrets and variables -> Actions):
+#   ANDROID_KEYSTORE_BASE64    the release keystore (.jks), base64-encoded
+#   ANDROID_KEYSTORE_PASSWORD  its password (key alias: liftlog)
+# Every APK must be signed with the same key, or Android refuses to install it as an
+# update. Without the secrets, each build gets a throwaway key (install only, no updates).
+name: Android app
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm test
+      - name: Build web app and copy it into the Android project
+        run: npm run android:sync
+        env:
+          # The APK has no server of its own, so the AI Coach calls the Netlify function.
+          # Override with a repository variable named COACH_URL.
+          VITE_COACH_URL: ${{ vars.COACH_URL || 'https://lucky-vacherin-7add5a.netlify.app/api/coach' }}
+      - name: Build signed APK
+        working-directory: android
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_VERSION_NAME: 1.${{ github.run_number }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: liftlog
+        run: |
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$ANDROID_KEYSTORE_PATH"
+            export ANDROID_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD"
+          else
+            echo "::warning::No signing secrets set. This APK uses a one-off key, so the next build won't install over it."
+            export ANDROID_KEYSTORE_PASSWORD="$(openssl rand -hex 16)"
+            keytool -genkeypair -keystore "$ANDROID_KEYSTORE_PATH" -alias liftlog -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEYSTORE_PASSWORD" -dname "CN=LiftLog"
+          fi
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/LiftLog.apk"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "android-v${{ github.run_number }}" "$RUNNER_TEMP/LiftLog.apk" \
+            --target "${{ github.sha }}" --latest \
+            --title "LiftLog for Android (build ${{ github.run_number }})" \
+            --notes "Install: on your Android phone, tap LiftLog.apk below, then Open. If asked, allow installs from your browser. A newer build installs as an update and keeps your data."

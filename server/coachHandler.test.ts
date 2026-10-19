@@ -32,6 +32,15 @@ describe('coach handler', () => {
     expect(status).toMatchObject({ requiresCode: true, authorized: false });
   });
 
+  it('answers CORS preflight so the Android app and GitHub Pages can call it', async () => {
+    const res = await handleCoachRequest(new Request('http://x/api/coach', { method: 'OPTIONS' }), { apiKey: 'k' });
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    expect(res.headers.get('access-control-allow-headers')).toContain('x-coach-code');
+    const get = await handleCoachRequest(new Request('http://x/api/coach'), { apiKey: 'k' });
+    expect(get.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
   it('POST without a key returns not_configured', async () => {
     const res = await handleCoachRequest(body('chat'), { apiKey: '' });
     expect(res.status).toBe(503);

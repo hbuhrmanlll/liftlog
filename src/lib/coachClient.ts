@@ -61,6 +61,10 @@ export function setAccessCode(code: string): void {
   }
 }
 
+// The installed app and GitHub Pages have no server of their own, so they call the
+// coach function on another host (VITE_COACH_URL, set at build time).
+const COACH_URL = import.meta.env.VITE_COACH_URL || COACH_ENDPOINT;
+
 function authHeaders(): Record<string, string> {
   const code = getAccessCode();
   return code ? { [ACCESS_CODE_HEADER]: code } : {};
@@ -74,7 +78,7 @@ export async function fetchCoachStatus(signal?: AbortSignal): Promise<CoachStatu
   if (isOffline()) throw new CoachError('offline');
   let res: Response;
   try {
-    res = await fetch(COACH_ENDPOINT, { method: 'GET', signal, headers: { accept: 'application/json', ...authHeaders() } });
+    res = await fetch(COACH_URL, { method: 'GET', signal, headers: { accept: 'application/json', ...authHeaders() } });
   } catch {
     throw new CoachError(isOffline() ? 'offline' : 'unreachable');
   }
@@ -89,7 +93,7 @@ async function post(body: CoachRequestBody, signal?: AbortSignal): Promise<Respo
   if (isOffline()) throw new CoachError('offline');
   let res: Response;
   try {
-    res = await fetch(COACH_ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), signal });
+    res = await fetch(COACH_URL, { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), signal });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw new CoachError('aborted');
     throw new CoachError(isOffline() ? 'offline' : 'unreachable');

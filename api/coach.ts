@@ -11,3 +11,7 @@ export function GET(req: Request): Promise<Response> {
 export function POST(req: Request): Promise<Response> {
   return handleCoachRequest(req, coachOptionsFromEnv(process.env));
 }
+
+export function OPTIONS(req: Request): Promise<Response> {
+  return handleCoachRequest(req, coachOptionsFromEnv(process.env));
+}

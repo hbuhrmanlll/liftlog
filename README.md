@@ -59,6 +59,16 @@ LiftLog then opens full-screen from your home screen and works offline. If you s
 
 Netlify works too: **Add new site → Import an existing project →** pick the repo **→ Deploy** (settings come from `netlify.toml`, and `public/_redirects` makes links like `/workout` work). Add `GEMINI_API_KEY` (or `ANTHROPIC_API_KEY`) and `COACH_ACCESS_CODE` under **Site configuration → Environment variables**, then **Deploys → Trigger deploy**. Netlify functions have a shorter time limit than Vercel's, so very long AI Coach answers can occasionally get cut off; everything else is identical.
 
+### GitHub Pages
+
+`.github/workflows/pages.yml` publishes the app to `https://<user>.github.io/<repo>/` on every push to `main`. One-time setup: repo **Settings → Pages → Source: GitHub Actions**. Pages can't run serverless functions, so this build calls the AI Coach on your Netlify site (set a repository variable `COACH_URL` to use a different one). The coach function allows cross-origin requests for this; keep `COACH_ACCESS_CODE` set.
+
+### Android app (APK)
+
+`.github/workflows/android.yml` wraps the app with [Capacitor](https://capacitorjs.com) (`android/`, `capacitor.config.ts`), builds a signed APK, and publishes it as a GitHub release. The newest build is always at `https://github.com/<user>/<repo>/releases/latest/download/LiftLog.apk` (also linked from **Settings → Android app**). Open that on the phone, tap **Open**, and allow installs from your browser if asked.
+
+Every APK must be signed with the same key, or Android won't install it as an update. Add the key once as repository secrets (**Settings → Secrets and variables → Actions**): `ANDROID_KEYSTORE_BASE64` (the `.jks` file, base64-encoded) and `ANDROID_KEYSTORE_PASSWORD` (key alias `liftlog`). Without them each build gets a throwaway key. The app keeps its own data, separate from the website: move it with **Export backup** / **Import backup**. To build locally: `npm run android:sync`, then open `android/` in Android Studio.
+
 > Your workout data lives on the device you log it on. Use **Settings → Export backup** regularly, and **Import backup** to move data to a new phone.
 
 ---

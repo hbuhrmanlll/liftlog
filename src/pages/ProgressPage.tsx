@@ -15,6 +15,7 @@ import { completedWorkouts, DAY_MS, exerciseHistory, muscleSets, personalRecords
 import { bmr, dailyEstimate, missingStats } from '../lib/calories';
 import { streamCoach } from '../lib/coachClient';
 import { formatCompact, formatDate, formatNumber, formatWeight } from '../lib/format';
+import { appUrl, isNativeApp, saveTextFile } from '../lib/platform';
 import { progressReport } from '../lib/progressReport';
 import { mainLiftKeys, strengthSeries, weeklyWeights } from '../lib/strength';
 import { WEEKDAYS, weighInDue, weighInIcs } from '../lib/weighIn';
@@ -298,16 +299,6 @@ function StrengthTab() {
   );
 }
 
-function download(name: string, content: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 function WeightTab() {
   const settings = useSettings();
@@ -401,8 +392,9 @@ function WeightTab() {
             <Button
               size="sm"
               onClick={() => {
-                download('liftlog-weekly-weigh-in.ics', weighInIcs(settings.weighInDay, window.location.origin), 'text/calendar');
-                toast('Open the downloaded file to add the reminder to your calendar', 'info');
+                void saveTextFile('liftlog-weekly-weigh-in.ics', weighInIcs(settings.weighInDay, appUrl()), 'text/calendar')
+                  .then(() => !isNativeApp && toast('Open the downloaded file to add the reminder to your calendar', 'info'))
+                  .catch(() => {});
               }}
             >
               <CalendarPlus className="size-4" aria-hidden /> Add a weekly phone reminder

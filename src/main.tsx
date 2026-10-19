@@ -3,12 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { recordCrash, reloadOnce } from './lib/crashLog';
+import { isNativeApp } from './lib/platform';
 import './index.css';
 import { Root } from './Root';
 
 // Check for a new version at startup, whenever the app comes back to the foreground,
 // and every 30 minutes; with autoUpdate the new version activates and reloads itself.
-registerSW({
+// The Android app ships its files inside the APK and updates by installing a new APK.
+if (!isNativeApp) registerSW({
   immediate: true,
   onRegisteredSW(_url, registration) {
     if (!registration) return;
