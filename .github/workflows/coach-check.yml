@@ -1,0 +1,19 @@
+# Temporary: checks the AI Coach server the Android app and GitHub Pages call.
+name: Coach server check
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/coach-check.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe
+        run: |
+          URL="${{ vars.COACH_URL || 'https://lucky-vacherin-7add5a.netlify.app/api/coach' }}"
+          report() { echo "::notice title=$1::$(echo "$2" | head -c 3000 | sed ':a;N;$!ba;s/\n/%0A/g')"; }
+          report "GET" "$(curl -sS -m 30 -i "$URL" -H 'Origin: https://localhost' 2>&1 | head -30)"
+          report "OPTIONS" "$(curl -sS -m 30 -i -X OPTIONS "$URL" -H 'Origin: https://localhost' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type,x-coach-code' 2>&1 | head -30)"
+          report "SITE" "$(curl -sS -m 30 -i https://lucky-vacherin-7add5a.netlify.app/ 2>&1 | head -15)"
