@@ -59,7 +59,7 @@ export function useCoachAvailability(): CoachAvailability & { refresh: () => voi
       .catch((err: unknown) => {
         if (ac.signal.aborted) return;
         const kind = err instanceof CoachError ? err.kind : 'unreachable';
-        const r: CoachAvailability = { state: 'unavailable', kind, message: friendlyCoachError(kind) };
+        const r: CoachAvailability = { state: 'unavailable', kind, message: err instanceof CoachError ? err.message : friendlyCoachError(kind) };
         cached = { at: Date.now(), result: r };
         setResult(r);
       });

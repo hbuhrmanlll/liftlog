@@ -256,7 +256,7 @@ export function SettingsPage() {
                 </>
               ) : (
                 <>
-                  <XCircle className="size-4 text-down" aria-hidden /> <span className="text-ink-2">{coach.message}</span>
+                  <XCircle className="size-4 shrink-0 text-down" aria-hidden /> <span className="text-ink-2">{coach.message}</span>
                 </>
               )}
               <button type="button" onClick={coach.refresh} className="ml-auto inline-flex items-center gap-1 text-[13px] text-ink-3 hover:text-ink" aria-label="Check AI Coach connection again">

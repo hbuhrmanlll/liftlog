@@ -65,6 +65,24 @@ export function setAccessCode(code: string): void {
 // coach function on another host (VITE_COACH_URL, set at build time).
 const COACH_URL = import.meta.env.VITE_COACH_URL || COACH_ENDPOINT;
 
+function serverName(): string {
+  try {
+    return new URL(COACH_URL, window.location.href).host;
+  } catch {
+    return COACH_URL;
+  }
+}
+
+/** Explains a status reply that isn't the coach's JSON, so a setup problem is visible on the phone. */
+async function describeBadStatus(res: Response): Promise<string> {
+  const text = await res.text().catch(() => '');
+  // Netlify's page for a missing or private site (its server header is hidden from cross-origin pages).
+  if (/site-not-found|Not Found - Request ID/i.test(text)) {
+    return `Netlify says ${serverName()} doesn't exist. If the site is set to Private, open it in Netlify and click Make public; private sites only open in a browser that's logged in to Netlify.`;
+  }
+  return `${friendlyCoachError('not_configured')} (${serverName()} answered HTTP ${res.status}.)`;
+}
+
 function authHeaders(): Record<string, string> {
   const code = getAccessCode();
   return code ? { [ACCESS_CODE_HEADER]: code } : {};
@@ -80,11 +98,12 @@ export async function fetchCoachStatus(signal?: AbortSignal): Promise<CoachStatu
   try {
     res = await fetch(COACH_URL, { method: 'GET', signal, headers: { accept: 'application/json', ...authHeaders() } });
   } catch {
-    throw new CoachError(isOffline() ? 'offline' : 'unreachable');
+    if (isOffline()) throw new CoachError('offline');
+    throw new CoachError('unreachable', `Couldn't reach the AI Coach server (${serverName()}). Check your connection and try again.`);
   }
   const type = res.headers.get('content-type') ?? '';
   // A static host without the function returns index.html or a 404.
-  if (!res.ok || !type.includes('application/json')) throw new CoachError('not_configured');
+  if (!res.ok || !type.includes('application/json')) throw new CoachError('not_configured', await describeBadStatus(res));
   const data = (await res.json()) as Partial<CoachStatus>;
   return { configured: Boolean(data.configured), model: String(data.model ?? ''), requiresCode: Boolean(data.requiresCode), authorized: data.authorized !== false };
 }
