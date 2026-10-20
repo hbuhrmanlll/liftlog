@@ -69,6 +69,11 @@ describe('volume and counts', () => {
     e.sets.push({ id: 'x', weight: 185, reps: 8, rir: null, done: false });
     expect(completedSets(e)).toHaveLength(1);
   });
+  it('keeps the set time when the set timer was used', () => {
+    const e = wex('Bench', [[185, 8], [185, 8]]);
+    e.sets[0].durationSec = 42;
+    expect(completedSets(e).map((s) => s.durationSec)).toEqual([42, undefined]);
+  });
   it('bodyweight lifts include bodyweight when known', () => {
     const pu = wex('Pull-Up', [[0, 10], [10, 8]], { equipment: 'bodyweight' });
     expect(workoutVolume(workout('p', 0, [pu]), 180)).toBe(180 * 10 + 190 * 8);

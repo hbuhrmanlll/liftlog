@@ -53,6 +53,7 @@ const setSchema = z.object({
   weight: z.number().nullable(),
   reps: z.number().nullable(),
   rir: z.number().nullable(),
+  durationSec: z.number().optional(),
   done: z.boolean(),
   extra: z.boolean().optional(),
 });

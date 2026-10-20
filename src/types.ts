@@ -1,4 +1,5 @@
 // Core domain types shared across the app. Pure data only; no behavior.
+import type { SoundId } from './lib/sounds';
 
 export type DayType = 'push' | 'pull' | 'legs';
 export const DAY_TYPES: readonly DayType[] = ['push', 'pull', 'legs'] as const;
@@ -78,6 +79,8 @@ export interface SetLog {
   rir: number | null;
   done: boolean;
   extra?: boolean;
+  /** Seconds the set took, when the set timer was used. */
+  durationSec?: number;
 }
 
 export interface WarmupSet {
@@ -178,6 +181,17 @@ export interface Settings {
   restIsolationSec: number;
   timerSound: boolean;
   timerVibrate: boolean;
+  /** Alert sound for the rest and set timers (see src/lib/sounds.ts). */
+  timerSoundId: SoundId;
+  /** 100 = normal; up to 300 to hear it over music. */
+  timerVolume: number;
+  /** How many times the alert plays. */
+  timerRepeat: number;
+  /** Optional per-set timer: counts up while you lift and alerts at the target. */
+  setTimerEnabled: boolean;
+  setTimerSec: number;
+  /** Keep the screen on while a workout is open. */
+  keepAwake: boolean;
   deloadReminders: boolean;
   warmupSuggestions: boolean;
   aiEnabled: boolean;

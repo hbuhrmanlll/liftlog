@@ -20,7 +20,7 @@ export function completedSets(ex: WorkoutExercise): LoggedSet[] {
   if (ex.skipped) return [];
   return ex.sets
     .filter((s) => s.done && s.reps !== null && s.reps > 0 && s.weight !== null)
-    .map((s) => ({ weight: s.weight as number, reps: s.reps as number, rir: s.rir }));
+    .map((s) => ({ weight: s.weight as number, reps: s.reps as number, rir: s.rir, ...(s.durationSec ? { durationSec: s.durationSec } : {}) }));
 }
 
 /** Load used for volume. Bodyweight lifts count bodyweight + added load when bodyweight is known. */

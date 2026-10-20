@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome dumbbell for the status bar (notification small icon). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10,22h7v20h-7z M18.5,17h7v30h-7z M38.5,17h7v30h-7z M47,22h7v20h-7z M25,29h14v6h-14z" />
+</vector>

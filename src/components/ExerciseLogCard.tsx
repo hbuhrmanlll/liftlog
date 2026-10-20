@@ -1,7 +1,8 @@
-import { Check, ChevronDown, Flame, Info, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Trash2, Undo2 } from 'lucide-react';
+import { Check, ChevronDown, Flame, Hourglass, Info, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Trash2, Undo2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { findLibraryExercise } from '../data/exerciseLibrary';
+import { useSetTimer } from '../hooks/restTimer';
 import { summarizeSession } from '../lib/calculations';
 import { formatClock } from '../lib/format';
 import { formatLoad, type Recommendation, type SessionResult } from '../lib/progression';
@@ -43,6 +44,9 @@ export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source
   const lib = source ?? findLibraryExercise(ex.name);
   const alternate = ex.swappedFrom ?? lib?.alternate;
   const fmt = (w: number) => formatLoad(w, ex.equipment, settings);
+  const setTimer = useSetTimer();
+  const nextSet = ex.sets.findIndex((x) => !x.done);
+  const timingHere = setTimer.running !== null && ex.sets.some((x) => x.id === setTimer.running?.setId);
 
   const updateSet = (i: number, patch: Partial<WorkoutExercise['sets'][number]>) => {
     let sets = ex.sets;
@@ -54,7 +58,12 @@ export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source
   const toggleDone = (i: number) => {
     const s = ex.sets[i];
     if (!s.done && !canComplete(s)) return;
-    const next = { ...ex, sets: ex.sets.map((x, k) => (k === i ? { ...x, done: !x.done, weight: x.weight ?? (bw ? 0 : x.weight) } : x)) };
+    // Finishing the set that's being timed records how long it took.
+    const durationSec = !s.done && setTimer.running?.setId === s.id ? setTimer.stopSet() : null;
+    const next = {
+      ...ex,
+      sets: ex.sets.map((x, k) => (k === i ? { ...x, done: !x.done, weight: x.weight ?? (bw ? 0 : x.weight), ...(durationSec ? { durationSec } : {}) } : x)),
+    };
     onChange(next);
     if (!s.done) onSetDone(next, i);
   };
@@ -182,6 +191,7 @@ export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source
                   </div>
                   {s.done && (
                     <div className="animate-fade-up ml-[28px] mt-1.5 flex items-center gap-1" role="group" aria-label={`Reps in reserve for set ${i + 1}`}>
+                      {s.durationSec ? <span className="tnum mr-1.5 text-[12px] text-ink-3">{formatClock(s.durationSec)} ·</span> : null}
                       <span className="mr-1 text-[12px] text-ink-3">Reps left?</span>
                       {RIR_OPTIONS.map((o) => (
                         <button
@@ -229,6 +239,20 @@ export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source
                 rows={2}
                 className="w-full resize-none rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none placeholder:text-ink-3 focus:border-accent/60"
               />
+            </div>
+          )}
+
+          {settings.setTimerEnabled && nextSet >= 0 && (
+            <div className="mt-3 px-4">
+              {timingHere ? (
+                <p className="flex h-10 items-center justify-center gap-2 rounded-xl bg-accent-soft text-[14px] font-medium text-ink">
+                  <Hourglass className="size-4 text-accent" aria-hidden /> Timing set {ex.sets.findIndex((x) => x.id === setTimer.running?.setId) + 1}. Tap ✓ when you finish it.
+                </p>
+              ) : (
+                <Button size="sm" className="w-full" onClick={() => setTimer.startSet(ex.sets[nextSet].id, `${ex.name} · set ${nextSet + 1}`)}>
+                  <Hourglass className="size-4" aria-hidden /> Start set {nextSet + 1} timer ({formatClock(settings.setTimerSec)})
+                </Button>
+              )}
             </div>
           )}
 

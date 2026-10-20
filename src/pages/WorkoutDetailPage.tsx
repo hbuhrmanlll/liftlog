@@ -7,7 +7,7 @@ import { deleteWorkout, saveWorkout } from '../db/repo';
 import { useToast } from '../hooks/toast';
 import { latestBodyweight, useBodyweight, useSettings, useWorkout } from '../hooks/useData';
 import { completedSets, workoutDurationSec, workoutSetCount, workoutVolume } from '../lib/calculations';
-import { formatCompact, formatDateLong, formatDuration, formatTime } from '../lib/format';
+import { formatClock, formatCompact, formatDateLong, formatDuration, formatTime } from '../lib/format';
 import { loadStep } from '../lib/rounding';
 import { makeSet } from '../lib/session';
 import { DAY_LABEL } from '../lib/schedule';
@@ -157,6 +157,7 @@ function Detail({ workout }: { workout: Workout }) {
                     <th className="w-12 pb-1.5 font-semibold">Set</th>
                     <th className="pb-1.5 font-semibold">Weight</th>
                     <th className="pb-1.5 font-semibold">Reps</th>
+                    {sets.some((s) => s.durationSec) && <th className="pb-1.5 font-semibold">Time</th>}
                     <th className="pb-1.5 text-right font-semibold">RIR</th>
                   </tr>
                 </thead>
@@ -166,6 +167,7 @@ function Detail({ workout }: { workout: Workout }) {
                       <td className="py-1.5 text-ink-3">{i + 1}</td>
                       <td className="py-1.5 font-medium">{ex.equipment === 'bodyweight' ? (s.weight > 0 ? `BW +${s.weight} ${u}` : 'Bodyweight') : `${s.weight} ${u}`}</td>
                       <td className="py-1.5 font-medium">{s.reps}</td>
+                      {sets.some((x) => x.durationSec) && <td className="py-1.5 text-ink-3">{s.durationSec ? formatClock(s.durationSec) : '-'}</td>}
                       <td className="py-1.5 text-right text-ink-3">{s.rir === null ? '-' : s.rir >= 4 ? '4+' : s.rir}</td>
                     </tr>
                   ))}

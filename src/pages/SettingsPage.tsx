@@ -2,6 +2,7 @@ import { Bot, CheckCircle2, ChevronRight, Download, FileSpreadsheet, ListChecks,
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ProfileSettings } from '../components/ProfileSettings';
+import { TimerSoundSettings } from '../components/TimerSoundSettings';
 import { Button, Card, ConfirmDialog, cx, PageHeader, Segmented, Spinner, Stepper, TextField, Toggle } from '../components/ui';
 import { db } from '../db/db';
 import { changeUnits, exportAll, getProgram, importAll, resetAll, updateExercise, updateSettings } from '../db/repo';
@@ -229,8 +230,19 @@ export function SettingsPage() {
             </Button>
           </div>
         )}
-        <Toggle label="Sound when rest ends" checked={s.timerSound} onChange={(timerSound) => void updateSettings({ timerSound })} />
-        <Toggle label="Vibrate when rest ends" description="On phones that support it" checked={s.timerVibrate} onChange={(timerVibrate) => void updateSettings({ timerVibrate })} />
+        <TimerSoundSettings s={s} />
+        <Toggle
+          label="Set timer"
+          description="Time each set: start it before you lift, and it alerts you at your target time and records how long the set took"
+          checked={s.setTimerEnabled}
+          onChange={(setTimerEnabled) => void updateSettings({ setTimerEnabled })}
+        />
+        {s.setTimerEnabled && (
+          <Row label="Target time per set" hint={`${formatClock(s.setTimerSec)} · about 3-4 s per rep is typical`}>
+            <Stepper label="Target seconds per set" value={s.setTimerSec} onChange={(v) => v !== null && void updateSettings({ setTimerSec: Math.max(5, v) })} step={5} min={5} className="max-w-48" />
+          </Row>
+        )}
+        <Toggle label="Keep screen on during workouts" description="So the timer and your sets stay visible between sets" checked={s.keepAwake} onChange={(keepAwake) => void updateSettings({ keepAwake })} />
         <Toggle
           label="Pre-fill sets with targets"
           description="Off: every set starts blank and you type in each one (targets show as hints)"

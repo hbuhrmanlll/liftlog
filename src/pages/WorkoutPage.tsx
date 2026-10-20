@@ -7,6 +7,7 @@ import { Button, Card, ConfirmDialog, cx, DayBadge, dayStyles, IconButton, PageH
 import { deleteCardio, discardWorkout, finishWorkout, saveWorkout, startWorkout, swapWorkoutExercise } from '../db/repo';
 import { useRestTimer } from '../hooks/restTimer';
 import { useToast } from '../hooks/toast';
+import { useWakeLock } from '../hooks/useWakeLock';
 import { useActiveWorkout, useCardio, useProgram, useSettings, useWorkouts } from '../hooks/useData';
 import { exerciseHistory } from '../lib/calculations';
 import { formatClock, formatDate } from '../lib/format';
@@ -129,6 +130,7 @@ function ActiveWorkout({ initial }: { initial: Workout }) {
   const allWorkouts = useWorkouts();
   const timer = useRestTimer();
   const toast = useToast();
+  useWakeLock(settings.keepAwake);
   const [workout, setWorkout] = useState<Workout>(initial);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);

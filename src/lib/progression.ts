@@ -13,6 +13,8 @@ export interface LoggedSet {
   reps: number;
   /** Reps in reserve, 4 = "4 or more", null = not logged. */
   rir: number | null;
+  /** Seconds the set took, if it was timed. */
+  durationSec?: number;
 }
 
 export interface SessionResult {

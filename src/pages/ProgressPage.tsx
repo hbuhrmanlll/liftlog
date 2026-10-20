@@ -389,19 +389,30 @@ function WeightTab() {
             </div>
           </div>
           <div className="pb-3">
-            <Button
-              size="sm"
-              onClick={() => {
-                void saveTextFile('liftlog-weekly-weigh-in.ics', weighInIcs(settings.weighInDay, appUrl()), 'text/calendar')
-                  .then(() => !isNativeApp && toast('Open the downloaded file to add the reminder to your calendar', 'info'))
-                  .catch(() => {});
-              }}
-            >
-              <CalendarPlus className="size-4" aria-hidden /> Add a weekly phone reminder
-            </Button>
-            <p className="mt-1.5 flex items-start gap-1.5 text-[12px] text-ink-3">
-              <Bell className="mt-0.5 size-3.5 shrink-0" aria-hidden /> Adds a repeating {WEEKDAYS[settings.weighInDay]} 8:00 AM event to your calendar app, so your phone notifies you even when LiftLog is closed.
-            </p>
+            {isNativeApp ? (
+              <p className="flex items-start gap-1.5 text-[13px] text-ink-2">
+                <Bell className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+                {settings.weighInReminders
+                  ? `You'll get a notification every ${WEEKDAYS[settings.weighInDay]} at 8:00 AM, even when LiftLog is closed.`
+                  : 'Turn on the weekly weigh-in reminder in Settings to get a notification.'}
+              </p>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    void saveTextFile('liftlog-weekly-weigh-in.ics', weighInIcs(settings.weighInDay, appUrl()), 'text/calendar')
+                      .then(() => toast('Open the downloaded file to add the reminder to your calendar', 'info'))
+                      .catch(() => {});
+                  }}
+                >
+                  <CalendarPlus className="size-4" aria-hidden /> Add a weekly phone reminder
+                </Button>
+                <p className="mt-1.5 flex items-start gap-1.5 text-[12px] text-ink-3">
+                  <Bell className="mt-0.5 size-3.5 shrink-0" aria-hidden /> Adds a repeating {WEEKDAYS[settings.weighInDay]} 8:00 AM event to your calendar app, so your phone notifies you even when LiftLog is closed.
+                </p>
+              </>
+            )}
           </div>
         </Card>
       </section>

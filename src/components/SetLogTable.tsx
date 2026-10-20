@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { epley1RM } from '../lib/calculations';
-import { formatDate, formatNumber, formatWeight } from '../lib/format';
+import { formatClock, formatDate, formatNumber, formatWeight } from '../lib/format';
 import type { SessionResult } from '../lib/progression';
 import { Button, Card } from './ui';
 
@@ -29,6 +29,7 @@ export function SetLogTable({ history, units, bodyweight }: { history: SessionRe
                     <th>Set</th>
                     <th>Weight</th>
                     <th>Reps</th>
+                    <th>Time</th>
                     <th>RIR</th>
                   </tr>
                 </thead>
@@ -38,6 +39,7 @@ export function SetLogTable({ history, units, bodyweight }: { history: SessionRe
                       <td className="w-14 py-0.5 text-ink-3">Set {i + 1}</td>
                       <td className="py-0.5 text-ink">{fmt(s.weight)}</td>
                       <td className="py-0.5 text-ink">× {s.reps}</td>
+                      <td className="py-0.5 text-ink-3">{s.durationSec ? formatClock(s.durationSec) : ''}</td>
                       <td className="py-0.5 text-right text-ink-3">{s.rir === null ? '' : `RIR ${s.rir >= 4 ? '4+' : s.rir}`}</td>
                     </tr>
                   ))}

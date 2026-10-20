@@ -38,4 +38,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Rest timer alerts fire on time even with the screen off. USE_EXACT_ALARM is
+         granted automatically on Android 13+; older versions use SCHEDULE_EXACT_ALARM. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
 </manifest>

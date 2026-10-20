@@ -9,6 +9,9 @@ const config: CapacitorConfig = {
   backgroundColor: '#0a0b0d',
   // Keep the app below the status bar and above the navigation bar on every Android version.
   android: { allowMixedContent: false, adjustMarginsForEdgeToEdge: 'force' },
+  plugins: {
+    LocalNotifications: { smallIcon: 'ic_stat_liftlog', iconColor: '#C6F432' },
+  },
 };
 
 export default config;
