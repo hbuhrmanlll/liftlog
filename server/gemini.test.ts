@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { coachOptionsFromEnv } from './coachEnv.js';
 import { handleCoachRequest } from './coachHandler.js';
-import { buildGeminiBody, GEMINI_DEFAULT_MODEL, readChunk } from './gemini.js';
+import { buildGeminiBody, GEMINI_DEFAULT_MODEL, readChunk } from '../shared/gemini.js';
 
 function sse(chunks: object[]): Response {
   const body = chunks.map((c) => `data: ${JSON.stringify(c)}\r\n\r\n`).join('');

@@ -9,7 +9,7 @@ import { useToast } from '../hooks/toast';
 import { useCoachAvailability } from '../hooks/useCoach';
 import { useSettings } from '../hooks/useData';
 import { parseBackup, workoutsToCsv, type BackupFile } from '../lib/backup';
-import { getAccessCode, setAccessCode } from '../lib/coachClient';
+import { getAccessCode, getDeviceGeminiKey, hasCoachServer, setAccessCode, setDeviceGeminiKey } from '../lib/coachClient';
 import { clearCrash, lastCrash } from '../lib/crashLog';
 import { LOAD_DEFAULTS } from '../lib/defaults';
 import { formatClock } from '../lib/format';
@@ -51,6 +51,7 @@ export function SettingsPage() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [restChanged, setRestChanged] = useState(false);
   const [code, setCode] = useState(getAccessCode);
+  const [geminiKey, setGeminiKey] = useState(getDeviceGeminiKey);
   const [crash, setCrash] = useState(lastCrash);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -242,7 +243,7 @@ export function SettingsPage() {
       </Group>
 
       <Group title="AI Coach" id="ai-coach">
-        <Toggle label="AI Coach" description="Chat, second opinions, suggestions, and workout wrap-ups powered by Claude." checked={s.aiEnabled} onChange={(aiEnabled) => void updateSettings({ aiEnabled })} />
+        <Toggle label="AI Coach" description="Chat, second opinions, suggestions, and workout wrap-ups." checked={s.aiEnabled} onChange={(aiEnabled) => void updateSettings({ aiEnabled })} />
         {s.aiEnabled && (
           <div className="py-3.5">
             <div className="flex items-center gap-2 text-[14px]">
@@ -267,53 +268,72 @@ export function SettingsPage() {
               className="mt-4 flex items-end gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                setAccessCode(code);
+                setDeviceGeminiKey(geminiKey);
                 coach.refresh();
-                toast(code.trim() ? 'Access code saved on this device' : 'Access code cleared');
+                toast(geminiKey.trim() ? 'Gemini key saved on this phone' : 'Gemini key removed');
               }}
             >
               <TextField
                 className="flex-1"
-                label="Access code (optional)"
+                label="Gemini API key"
                 type="password"
                 autoComplete="off"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                hint="Only needed if you set COACH_ACCESS_CODE on your server. Stored on this device only."
+                placeholder="AIza..."
+                value={geminiKey}
+                onChange={(e) => setGeminiKey(e.target.value)}
+                hint="Free from Google. Saved only on this phone, for every profile here, and sent only to Google."
               />
               <Button type="submit" className="mb-[22px]">
                 Save
               </Button>
             </form>
-            {coach.state === 'unavailable' && coach.kind !== 'offline' && (
+            {hasCoachServer && !getDeviceGeminiKey() && (
+              <form
+                className="mt-2 flex items-end gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setAccessCode(code);
+                  coach.refresh();
+                  toast(code.trim() ? 'Access code saved on this device' : 'Access code cleared');
+                }}
+              >
+                <TextField
+                  className="flex-1"
+                  label="Server access code (optional)"
+                  type="password"
+                  autoComplete="off"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  hint="Only if your own coach server has COACH_ACCESS_CODE set. Not your profile PIN."
+                />
+                <Button type="submit" className="mb-[22px]">
+                  Save
+                </Button>
+              </form>
+            )}
+            {coach.state === 'unavailable' && coach.kind !== 'offline' && !getDeviceGeminiKey() && (
               <div className="mt-3 rounded-xl bg-surface-2 p-4 text-[13px] leading-relaxed text-ink-2">
                 <p className="mb-2 flex items-center gap-2 font-semibold text-ink">
-                  <Bot className="size-4 text-accent" aria-hidden /> How to set up the AI Coach
+                  <Bot className="size-4 text-accent" aria-hidden /> Turn on the AI Coach (free)
                 </p>
                 <ol className="list-decimal space-y-1.5 pl-4">
                   <li>
-                    Get a <strong className="text-ink">free</strong> Google Gemini key at{' '}
+                    Open{' '}
                     <a className="font-medium text-accent hover:underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">
                       aistudio.google.com/apikey
                     </a>{' '}
-                    (no credit card). Or use a paid Claude key from{' '}
-                    <a className="font-medium text-accent hover:underline" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">
-                      console.anthropic.com
-                    </a>
-                    .
+                    and sign in with a Google account (no credit card).
                   </li>
                   <li>
-                    <strong className="text-ink">On Netlify:</strong> Site configuration → Environment variables → add <code className="rounded bg-surface-3 px-1">GEMINI_API_KEY</code>, then Deploys → Trigger deploy.{' '}
-                    <strong className="text-ink">On Vercel:</strong> Project → Settings → Environment Variables → same name, then redeploy.
+                    Tap <strong className="text-ink">Create API key</strong> and copy it. It starts with <code className="rounded bg-surface-3 px-1">AIza</code>.
                   </li>
                   <li>
-                    <strong className="text-ink">Running on your computer:</strong> put <code className="rounded bg-surface-3 px-1">GEMINI_API_KEY=your-key</code> in a file named <code className="rounded bg-surface-3 px-1">.env.local</code> in the project folder, then restart <code className="rounded bg-surface-3 px-1">npm run dev</code>.
-                  </li>
-                  <li>
-                    Recommended when deployed: also add <code className="rounded bg-surface-3 px-1">COACH_ACCESS_CODE</code> (any password) so only you can use your key, and enter the same code above.
+                    Paste it in <strong className="text-ink">Gemini API key</strong> above and tap <strong className="text-ink">Save</strong>.
                   </li>
                 </ol>
-                <p className="mt-2 text-ink-3">The key stays on the server and is never sent to your phone. Everything else in LiftLog works without it.</p>
+                <p className="mt-2 text-ink-3">
+                  The free tier has daily limits, and Google may use free-tier requests (which include your training summary) to improve its products. Everything else in LiftLog works without a key.
+                </p>
               </div>
             )}
           </div>

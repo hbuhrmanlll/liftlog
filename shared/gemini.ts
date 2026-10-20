@@ -1,14 +1,20 @@
 /**
  * Google Gemini backend for the AI Coach (free tier friendly).
  * Uses the Gemini REST API directly with fetch, so there is no extra dependency.
+ * Shared by the server function and by the app itself when a key is saved on the phone.
  * Docs: https://ai.google.dev/api/generate-content
  */
-import type { RunResult } from './coachHandler.js';
 
 /** Google's alias for the newest Flash model; override with GEMINI_MODEL. */
 export const GEMINI_DEFAULT_MODEL = 'gemini-flash-latest';
 
-const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+export const GEMINI_MODELS_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const BASE = GEMINI_MODELS_URL;
+
+export interface GeminiResult {
+  text: string;
+  stopReason: string | null;
+}
 
 export class GeminiError extends Error {
   status: number;
@@ -57,7 +63,7 @@ export function readChunk(chunk: GeminiChunk): { text: string; blocked: boolean 
 }
 
 /** Streams a Gemini response (server-sent events), calling onText for every text delta. */
-export async function runGemini(apiKey: string, call: GeminiCall, onText: (delta: string) => void, signal?: AbortSignal, fetchImpl: typeof fetch = fetch): Promise<RunResult> {
+export async function runGemini(apiKey: string, call: GeminiCall, onText: (delta: string) => void, signal?: AbortSignal, fetchImpl: typeof fetch = fetch): Promise<GeminiResult> {
   let res: Response;
   try {
     res = await fetchImpl(`${BASE}/${encodeURIComponent(call.model)}:streamGenerateContent?alt=sse`, {

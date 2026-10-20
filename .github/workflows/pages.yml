@@ -31,9 +31,10 @@ jobs:
         run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
-          # Pages can't run the AI Coach function, so the app calls the Netlify one.
-          # Override with a repository variable named COACH_URL.
-          VITE_COACH_URL: ${{ vars.COACH_URL || 'https://lucky-vacherin-7add5a.netlify.app/api/coach' }}
+          # No server here: the AI Coach uses a Gemini key saved in the app's Settings.
+          # To use your own coach server instead, set a repository variable COACH_URL
+          # (for example https://<site>.netlify.app/api/coach).
+          VITE_COACH_URL: ${{ vars.COACH_URL }}
       # Pages has no rewrites: serving the app for unknown paths makes /workout etc. work.
       - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3

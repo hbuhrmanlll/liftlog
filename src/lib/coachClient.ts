@@ -1,5 +1,18 @@
-/** Browser-side client for the /api/coach proxy. Never sees the API key. */
-import { ACCESS_CODE_HEADER, COACH_ENDPOINT, STREAM_ERROR_PREFIX, STREAM_ERROR_SUFFIX, type CoachRequestBody, type CoachStatus } from '../../shared/coach';
+/** Browser-side client for the AI Coach: the /api/coach proxy, or Gemini directly with a key saved on this phone. */
+import {
+  ACCESS_CODE_HEADER,
+  COACH_ENDPOINT,
+  COACH_SYSTEM_PROMPT,
+  OPINION_JSON_SCHEMA,
+  STREAM_ERROR_PREFIX,
+  STREAM_ERROR_SUFFIX,
+  SUGGEST_JSON_SCHEMA,
+  taskSystemText,
+  type CoachRequestBody,
+  type CoachStatus,
+} from '../../shared/coach';
+import { GEMINI_DEFAULT_MODEL, GEMINI_MODELS_URL, GeminiError, runGemini } from '../../shared/gemini';
+import { isNativeApp } from './platform';
 
 export type CoachErrorKind = 'locked' | 'offline' | 'not_configured' | 'unreachable' | 'auth' | 'rate_limited' | 'refused' | 'upstream' | 'aborted' | 'bad_request' | 'overloaded';
 
@@ -18,11 +31,11 @@ export function friendlyCoachError(kind: CoachErrorKind): string {
     case 'offline':
       return "You're offline. The AI Coach needs a connection - everything else in LiftLog works offline.";
     case 'not_configured':
-      return "The AI Coach isn't set up yet.";
+      return "The AI Coach isn't set up yet. Add a free Gemini key in Settings → AI Coach.";
     case 'unreachable':
       return "Couldn't reach the AI Coach server. Check your connection and try again.";
     case 'auth':
-      return 'The AI Coach API key was rejected. Check ANTHROPIC_API_KEY on your server.';
+      return 'The AI Coach API key was rejected. Check the key in Settings → AI Coach.';
     case 'rate_limited':
       return 'The coach is busy right now. Try again in a minute.';
     case 'refused':
@@ -42,6 +55,28 @@ const KNOWN: CoachErrorKind[] = ['locked', 'not_configured', 'auth', 'rate_limit
 const toKind = (code: unknown): CoachErrorKind => (typeof code === 'string' && (KNOWN as string[]).includes(code) ? (code as CoachErrorKind) : 'upstream');
 
 const CODE_KEY = 'liftlog.coachCode';
+const GEMINI_KEY = 'liftlog.geminiKey';
+
+/**
+ * A Gemini key the person pasted into Settings. It stays in this device's storage
+ * (shared by every profile, never in backups) and is sent only to Google.
+ */
+export function getDeviceGeminiKey(): string {
+  try {
+    return localStorage.getItem(GEMINI_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function setDeviceGeminiKey(key: string): void {
+  try {
+    if (key.trim()) localStorage.setItem(GEMINI_KEY, key.trim());
+    else localStorage.removeItem(GEMINI_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 /** The access code lives only in this browser's storage (not in backups). */
 export function getAccessCode(): string {
@@ -64,6 +99,9 @@ export function setAccessCode(code: string): void {
 // The installed app and GitHub Pages have no server of their own, so they call the
 // coach function on another host (VITE_COACH_URL, set at build time).
 const COACH_URL = import.meta.env.VITE_COACH_URL || COACH_ENDPOINT;
+// GitHub Pages and the Android app can't run the function, so without VITE_COACH_URL
+// there is no server to ask and only a key saved on the phone works.
+export const hasCoachServer = Boolean(import.meta.env.VITE_COACH_URL) || !(isNativeApp || (typeof location !== 'undefined' && location.hostname.endsWith('github.io')));
 
 function serverName(): string {
   try {
@@ -94,6 +132,9 @@ function isOffline(): boolean {
 
 export async function fetchCoachStatus(signal?: AbortSignal): Promise<CoachStatus> {
   if (isOffline()) throw new CoachError('offline');
+  const key = getDeviceGeminiKey();
+  if (key) return checkDeviceKey(key, signal);
+  if (!hasCoachServer) throw new CoachError('not_configured');
   let res: Response;
   try {
     res = await fetch(COACH_URL, { method: 'GET', signal, headers: { accept: 'application/json', ...authHeaders() } });
@@ -106,6 +147,46 @@ export async function fetchCoachStatus(signal?: AbortSignal): Promise<CoachStatu
   if (!res.ok || !type.includes('application/json')) throw new CoachError('not_configured', await describeBadStatus(res));
   const data = (await res.json()) as Partial<CoachStatus>;
   return { configured: Boolean(data.configured), model: String(data.model ?? ''), requiresCode: Boolean(data.requiresCode), authorized: data.authorized !== false };
+}
+
+/** Confirms Google accepts the saved key (reading model info is free and has no quota cost). */
+async function checkDeviceKey(key: string, signal?: AbortSignal): Promise<CoachStatus> {
+  let res: Response;
+  try {
+    res = await fetch(`${GEMINI_MODELS_URL}/${GEMINI_DEFAULT_MODEL}`, { headers: { 'x-goog-api-key': key }, signal });
+  } catch {
+    throw new CoachError(isOffline() ? 'offline' : 'unreachable', "Couldn't reach Google's Gemini service. Check your connection and try again.");
+  }
+  if (res.status === 400 || res.status === 401 || res.status === 403) throw new CoachError('auth', 'Google rejected this Gemini key. Copy it again from aistudio.google.com/apikey.');
+  if (res.status === 429) throw new CoachError('rate_limited', "You've hit Gemini's free daily limit. It resets in a few hours.");
+  if (!res.ok) throw new CoachError('upstream', `Gemini answered HTTP ${res.status}. Try again shortly.`);
+  return { configured: true, model: 'Gemini, key on this phone', requiresCode: false, authorized: true };
+}
+
+/** Maps a direct Gemini failure to the same errors the server would return. */
+function geminiFailure(err: unknown, signal?: AbortSignal): CoachError {
+  if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return new CoachError('aborted');
+  if (err instanceof GeminiError) {
+    if (err.status === 0) return new CoachError(isOffline() ? 'offline' : 'unreachable', "Couldn't reach Google's Gemini service. Check your connection and try again.");
+    if (err.status === 400 || err.status === 401 || err.status === 403) return new CoachError('auth', 'Google rejected the Gemini key. Check it in Settings → AI Coach.');
+    if (err.status === 429) return new CoachError('rate_limited', "You've hit Gemini's free limit. Try again later.");
+    if (err.status >= 500) return new CoachError('overloaded', 'Gemini is busy. Try again shortly.');
+  }
+  return new CoachError(isOffline() ? 'offline' : 'upstream');
+}
+
+/** Runs a task against Gemini from this device, with the same prompt the server uses. */
+async function runDirect(key: string, body: CoachRequestBody, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<string> {
+  if (isOffline()) throw new CoachError('offline');
+  const jsonSchema = body.task === 'suggest' ? SUGGEST_JSON_SCHEMA : body.task === 'opinion' ? OPINION_JSON_SCHEMA : undefined;
+  let result;
+  try {
+    result = await runGemini(key, { model: GEMINI_DEFAULT_MODEL, system: `${COACH_SYSTEM_PROMPT}\n\n${taskSystemText(body.task, body.context)}`, messages: body.messages, jsonSchema }, onDelta, signal);
+  } catch (err) {
+    throw geminiFailure(err, signal);
+  }
+  if (result.stopReason === 'refusal') throw new CoachError('refused');
+  return result.text;
 }
 
 async function post(body: CoachRequestBody, signal?: AbortSignal): Promise<Response> {
@@ -141,6 +222,13 @@ export function splitStreamError(text: string): { text: string; error?: CoachErr
 
 /** Streams a text task. Calls onText with the full text so far. Returns the final text. */
 export async function streamCoach(body: CoachRequestBody, onText: (full: string) => void, signal?: AbortSignal): Promise<string> {
+  const key = getDeviceGeminiKey();
+  if (key) {
+    let full = '';
+    const text = await runDirect(key, body, (delta) => onText((full += delta)), signal);
+    return text.trim();
+  }
+  if (!hasCoachServer) throw new CoachError('not_configured');
   const res = await post(body, signal);
   if (!res.body) {
     const t = await res.text();
@@ -178,6 +266,9 @@ export async function streamCoach(body: CoachRequestBody, onText: (full: string)
 
 /** Runs a structured (JSON) task and returns the raw model text for validation. */
 export async function requestCoachJson(body: CoachRequestBody, signal?: AbortSignal): Promise<string> {
+  const key = getDeviceGeminiKey();
+  if (key) return runDirect(key, body, () => {}, signal);
+  if (!hasCoachServer) throw new CoachError('not_configured');
   const res = await post(body, signal);
   const data = (await res.json()) as { text?: unknown };
   if (typeof data.text !== 'string') throw new CoachError('upstream');

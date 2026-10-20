@@ -61,7 +61,7 @@ Netlify works too: **Add new site → Import an existing project →** pick the 
 
 ### GitHub Pages
 
-`.github/workflows/pages.yml` publishes the app to `https://<user>.github.io/<repo>/` on every push to `main`. One-time setup: repo **Settings → Pages → Source: GitHub Actions**. Pages can't run serverless functions, so this build calls the AI Coach on your Netlify site (set a repository variable `COACH_URL` to use a different one). The coach function allows cross-origin requests for this; keep `COACH_ACCESS_CODE` set.
+`.github/workflows/pages.yml` publishes the app to `https://<user>.github.io/<repo>/` on every push to `main`. One-time setup: repo **Settings → Pages → Source: GitHub Actions**. Pages can't run serverless functions, so the AI Coach there uses a Gemini key saved in Settings. To use a coach server instead, set a repository variable `COACH_URL` (the function allows cross-origin requests; keep `COACH_ACCESS_CODE` set).
 
 ### Android app (APK)
 
@@ -75,7 +75,11 @@ Every APK must be signed with the same key, or Android won't install it as an up
 
 ## AI Coach setup
 
-The AI Coach is optional. Without a key, everything else works and AI features show "Set up AI Coach in Settings". It supports two providers. Set **one** key:
+The AI Coach is optional. Without a key, everything else works and AI features show "Set up AI Coach in Settings".
+
+**Easiest (no server, works on GitHub Pages and in the Android app):** get a free Gemini key (below) and paste it into **Settings → AI Coach → Gemini API key**. The app then calls Gemini directly. The key is stored only in that device's storage (shared by its profiles, not in backups) and is sent only to Google.
+
+**Or run the coach server** (Vercel, Netlify, or `npm run dev`), which keeps the key off the phone. It supports two providers. Set **one** key:
 
 | Provider | Cost | Variable | Get a key |
 | --- | --- | --- | --- |

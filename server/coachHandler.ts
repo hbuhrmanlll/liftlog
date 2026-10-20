@@ -17,10 +17,10 @@ import {
   STREAM_ERROR_PREFIX,
   STREAM_ERROR_SUFFIX,
   SUGGEST_JSON_SCHEMA,
-  TASK_INSTRUCTIONS,
+  taskSystemText,
   type CoachTask,
 } from '../shared/coach.js';
-import { GEMINI_DEFAULT_MODEL, GeminiError, runGemini } from './gemini.js';
+import { GEMINI_DEFAULT_MODEL, GeminiError, runGemini } from '../shared/gemini.js';
 
 export type CoachProvider = 'anthropic' | 'gemini';
 
@@ -81,7 +81,7 @@ export function buildParams(task: CoachTask, context: string, messages: { role: 
     cache_control: { type: 'ephemeral' },
     system: [
       { type: 'text', text: COACH_SYSTEM_PROMPT },
-      { type: 'text', text: `${TASK_INSTRUCTIONS[task]}\n\n<athlete_data>\n${context}\n</athlete_data>` },
+      { type: 'text', text: taskSystemText(task, context) },
     ],
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
   };

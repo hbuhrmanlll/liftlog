@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSeedProgram } from '../data/seedProgram';
 import type { CardioLog, Settings, Workout, WorkoutExercise } from '../types';
 import { buildCoachContext } from './coachContext';
 import { extractJson, parseOpinion, parseSuggestions, reconcileOpinion } from './coachSchemas';
 import { DEFAULT_SETTINGS, LOAD_DEFAULTS } from './defaults';
 import { recommend } from './progression';
-import { splitStreamError } from './coachClient';
+import { fetchCoachStatus, requestCoachJson, setDeviceGeminiKey, splitStreamError, streamCoach } from './coachClient';
 
 const DAY = 86_400_000;
 const NOW = new Date(2026, 9, 18, 9).getTime();
@@ -230,5 +230,45 @@ describe('extractJson / splitStreamError', () => {
   it('splitStreamError strips the server error marker', () => {
     expect(splitStreamError('Good work.\n\n[[coach-error:rate_limited]]')).toEqual({ text: 'Good work.', error: 'rate_limited' });
     expect(splitStreamError('plain')).toEqual({ text: 'plain' });
+  });
+});
+
+describe('Gemini key saved on the phone', () => {
+  const store = new Map<string, string>();
+  const sse = (...texts: string[]) =>
+    new Response(texts.map((t) => `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: t }] } }] })}\n\n`).join(''), { status: 200 });
+
+  beforeEach(() => {
+    store.clear();
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v), removeItem: (k: string) => store.delete(k) });
+    setDeviceGeminiKey('AIza-test');
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('streams straight from Gemini with the coach prompt and the key in a header', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => sse('Keep ', 'pushing.'));
+    vi.stubGlobal('fetch', fetchMock);
+    const seen: string[] = [];
+    const text = await streamCoach({ task: 'chat', context: 'Goal: Build Muscle', messages: [{ role: 'user', content: 'Hi' }] }, (t) => seen.push(t));
+    expect(text).toBe('Keep pushing.');
+    expect(seen).toEqual(['Keep ', 'Keep pushing.']);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain('generativelanguage.googleapis.com');
+    expect((init?.headers as Record<string, string>)['x-goog-api-key']).toBe('AIza-test');
+    const sent = JSON.parse(String(init?.body)) as { systemInstruction: { parts: { text: string }[] } };
+    expect(sent.systemInstruction.parts[0].text).toContain('Goal: Build Muscle');
+  });
+
+  it('reports a rejected key as an auth problem', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"error":{"message":"API key not valid"}}', { status: 400 })));
+    await expect(fetchCoachStatus()).rejects.toMatchObject({ kind: 'auth' });
+    await expect(requestCoachJson({ task: 'suggest', context: '', messages: [{ role: 'user', content: 'x' }] })).rejects.toMatchObject({ kind: 'auth' });
+  });
+
+  it('reports a working key as connected without using a server', async () => {
+    const fetchMock = vi.fn(async () => new Response('{"name":"models/gemini-flash-latest"}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await fetchCoachStatus()).toMatchObject({ configured: true, authorized: true });
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain('generativelanguage.googleapis.com');
   });
 });

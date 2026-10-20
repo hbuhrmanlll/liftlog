@@ -120,3 +120,8 @@ export const OPINION_JSON_SCHEMA = {
     agreesWithEngine: { type: 'boolean' },
   },
 } as const;
+
+/** Task rules plus the athlete's data; sent after COACH_SYSTEM_PROMPT by every provider. */
+export function taskSystemText(task: CoachTask, context: string): string {
+  return `${TASK_INSTRUCTIONS[task]}\n\n<athlete_data>\n${context}\n</athlete_data>`;
+}
