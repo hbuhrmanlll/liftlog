@@ -14,6 +14,7 @@ import { getAccessCode, getDeviceGeminiKey, hasCoachServer, setAccessCode, setDe
 import { clearCrash, lastCrash } from '../lib/crashLog';
 import { LOAD_DEFAULTS } from '../lib/defaults';
 import { formatClock } from '../lib/format';
+import { WEEKDAYS } from '../lib/weighIn';
 import { ANDROID_APK_URL, isNativeApp, saveTextFile } from '../lib/platform';
 import type { Goal, Schedule, Units } from '../types';
 
@@ -123,7 +124,7 @@ export function SettingsPage() {
           <Segmented<Schedule>
             label="Schedule"
             value={s.schedule}
-            onChange={(schedule) => void updateSettings({ schedule })}
+            onChange={(schedule) => void updateSettings({ schedule, trainingDays: schedule === 6 ? [1, 2, 3, 4, 5, 6] : [1, 3, 5] })}
             options={[
               { value: 3, label: '3 days / week' },
               { value: 6, label: '6 days / week' },
@@ -252,6 +253,47 @@ export function SettingsPage() {
         <Toggle label="Warm-up suggestions" description="Ramp-up sets for the first compound lift (not counted)" checked={s.warmupSuggestions} onChange={(warmupSuggestions) => void updateSettings({ warmupSuggestions })} />
         <Toggle label="Weekly weigh-in reminder" description="Reminder on Home; change the day in Progress → Weight" checked={s.weighInReminders} onChange={(weighInReminders) => void updateSettings({ weighInReminders })} />
         <Toggle label="Deload reminders" description="A nudge after 6-8 weeks of continuous training" checked={s.deloadReminders} onChange={(deloadReminders) => void updateSettings({ deloadReminders })} />
+      </Group>
+
+      <Group title="Workout reminders" id="reminders">
+        <Toggle
+          label="Remind me to work out"
+          description={isNativeApp ? 'A motivating notification on your training days, skipped if you already trained' : 'Notifications work in the Android app (Settings → Android app)'}
+          checked={s.workoutReminders}
+          onChange={(workoutReminders) => void updateSettings({ workoutReminders })}
+        />
+        {s.workoutReminders && (
+          <>
+            <Row label="Training days" hint={`${s.trainingDays.length} days a week`}>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Training days">
+                {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+                  const on = s.trainingDays.includes(d);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      aria-pressed={on}
+                      aria-label={WEEKDAYS[d]}
+                      onClick={() => void updateSettings({ trainingDays: on ? s.trainingDays.filter((x) => x !== d) : [...s.trainingDays, d].sort() })}
+                      className={cx('h-9 min-w-11 rounded-lg px-2.5 text-[13px] font-semibold', on ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink-2')}
+                    >
+                      {WEEKDAYS[d].slice(0, 3)}
+                    </button>
+                  );
+                })}
+              </div>
+            </Row>
+            <Row label="Reminder time">
+              <input
+                type="time"
+                aria-label="Reminder time"
+                value={s.reminderTime}
+                onChange={(e) => e.target.value && void updateSettings({ reminderTime: e.target.value })}
+                className="tnum h-11 rounded-xl border border-line bg-surface-2 px-3 text-[16px] font-semibold text-ink outline-none focus:border-accent/60"
+              />
+            </Row>
+          </>
+        )}
       </Group>
 
       <Group title="AI Coach" id="ai-coach">

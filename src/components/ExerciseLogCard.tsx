@@ -1,7 +1,7 @@
-import { Check, ChevronDown, Flame, Hourglass, Info, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Trash2, Undo2 } from 'lucide-react';
+import { Check, ChevronDown, Flame, Hourglass, Info, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Trash2, TrendingUp, Undo2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { findLibraryExercise } from '../data/exerciseLibrary';
+import { findLibraryExercise, nextHarder } from '../data/exerciseLibrary';
 import { useSetTimer } from '../hooks/restTimer';
 import { summarizeSession } from '../lib/calculations';
 import { formatClock } from '../lib/format';
@@ -30,9 +30,13 @@ export interface ExerciseLogCardProps {
   onChange: (next: WorkoutExercise) => void;
   onSetDone: (ex: WorkoutExercise, setIndex: number) => void;
   onSwap: () => void;
+  /** Home exercises: switch to the harder variation for good. */
+  onHarder?: (name: string) => void;
+  /** The other exercises in this workout, so "make it harder" never duplicates one. */
+  otherNames?: string[];
 }
 
-export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source, settings, lastSession, rec, onChange, onSetDone, onSwap }: ExerciseLogCardProps) {
+export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source, settings, lastSession, rec, onChange, onSetDone, onSwap, onHarder, otherNames }: ExerciseLogCardProps) {
   const [menu, setMenu] = useState(false);
   const [guide, setGuide] = useState(false);
   const [noteOpen, setNoteOpen] = useState(Boolean(ex.note));
@@ -43,6 +47,7 @@ export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source
   const bw = ex.equipment === 'bodyweight';
   const lib = source ?? findLibraryExercise(ex.name);
   const alternate = ex.swappedFrom ?? lib?.alternate;
+  const harder = onHarder ? nextHarder(ex.name, otherNames ?? []) : undefined;
   const fmt = (w: number) => formatLoad(w, ex.equipment, settings);
   const setTimer = useSetTimer();
   const nextSet = ex.sets.findIndex((x) => !x.done);
@@ -88,7 +93,7 @@ export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source
           </button>
           <p className="tnum mt-0.5 text-[13px] text-ink-3">
             {ex.targetSets} x {ex.repMin}-{ex.repMax}
-            {ex.name.toLowerCase().includes('lunge') ? ' per leg' : ''} · rest {formatClock(ex.restSec)}
+            {/lunge|split squat|single-leg|shrimp/i.test(ex.name) ? ' per leg' : /dead bug/i.test(ex.name) ? ' per side' : ''} · rest {formatClock(ex.restSec)}
             {ex.equipment === 'dumbbell' ? ' · per dumbbell' : ''}
             {bw ? ` · added ${settings.units}` : ''}
           </p>
@@ -276,6 +281,7 @@ export const ExerciseLogCard = memo(function ExerciseLogCard({ index, ex, source
         <div className="-mx-2 flex flex-col">
           {[
             { Icon: Plus, label: 'Add an extra set', on: addSet, show: !ex.skipped },
+            { Icon: TrendingUp, label: harder ? `Make it harder: ${harder}` : '', on: () => harder && onHarder?.(harder), show: Boolean(harder && onHarder), sub: 'Switches now and keeps the harder version in your program' },
             { Icon: Repeat, label: alternate ? `Swap to ${alternate}` : 'No alternate set', on: onSwap, show: Boolean(alternate), sub: 'Uses its own history and recommendation' },
             { Icon: NotebookPen, label: 'Add a note', on: () => setNoteOpen(true), show: !ex.skipped },
             { Icon: Info, label: 'How to do it', on: () => setGuide(true), show: true },

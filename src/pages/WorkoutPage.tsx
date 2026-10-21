@@ -3,8 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CardioForm } from '../components/CardioForm';
 import { ExerciseLogCard } from '../components/ExerciseLogCard';
+import { PlacePicker } from '../components/PlacePicker';
 import { Button, Card, ConfirmDialog, cx, DayBadge, dayStyles, IconButton, PageHeader, SectionTitle, Sheet } from '../components/ui';
-import { deleteCardio, discardWorkout, finishWorkout, saveWorkout, startWorkout, swapWorkoutExercise } from '../db/repo';
+import { deleteCardio, discardWorkout, finishWorkout, makeExerciseHarder, placeOf, saveWorkout, startWorkout, swapWorkoutExercise } from '../db/repo';
 import { useRestTimer } from '../hooks/restTimer';
 import { useToast } from '../hooks/toast';
 import { useWakeLock } from '../hooks/useWakeLock';
@@ -12,6 +13,7 @@ import { useActiveWorkout, useCardio, useProgram, useSettings, useWorkouts } fro
 import { exerciseHistory } from '../lib/calculations';
 import { formatClock, formatDate } from '../lib/format';
 import { recommend } from '../lib/progression';
+import { progressionExtras } from '../lib/session';
 import { DAY_DESCRIPTION, DAY_LABEL, nextDay } from '../lib/schedule';
 import { DAY_TYPES, type DayType, type Workout, type WorkoutExercise } from '../types';
 
@@ -30,20 +32,22 @@ export function WorkoutPage() {
 function StartWorkout() {
   const nav = useNavigate();
   const workouts = useWorkouts();
-  const program = useProgram();
   const settings = useSettings();
+  const place = settings.lastPlace;
+  const program = useProgram(place);
   const cardio = useCardio();
   const toast = useToast();
   const suggested = nextDay(workouts);
 
   const start = async (day: DayType) => {
-    await startWorkout(day);
+    await startWorkout(day, place);
     nav('/workout');
   };
 
   return (
     <div className="animate-fade-up space-y-6">
       <PageHeader title="Workout" subtitle="Pick today's session. Next in your rotation is highlighted." />
+      <PlacePicker value={place} />
       <div className="space-y-3">
         {DAY_TYPES.map((d) => {
           const isNext = d === suggested;
@@ -63,7 +67,7 @@ function StartWorkout() {
                   {isNext && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent-ink">Next up</span>}
                 </span>
                 <span className="block text-[13px] text-ink-3">
-                  {DAY_DESCRIPTION[d]} · {program.filter((e) => e.day === d).length} exercises
+                  {DAY_DESCRIPTION[d]} · {program.filter((e) => e.day === d).length} {place === 'home' ? 'home exercises' : 'exercises'}
                 </span>
               </span>
               <ChevronRight className="size-5 text-ink-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
@@ -126,7 +130,7 @@ function useElapsed(since: number): number {
 function ActiveWorkout({ initial }: { initial: Workout }) {
   const nav = useNavigate();
   const settings = useSettings();
-  const program = useProgram();
+  const program = useProgram(placeOf(initial));
   const allWorkouts = useWorkouts();
   const timer = useRestTimer();
   const toast = useToast();
@@ -155,7 +159,7 @@ function ActiveWorkout({ initial }: { initial: Workout }) {
       workout.exercises.map((ex) => {
         const h = exerciseHistory(history, ex.key, workout.id);
         const src = program.find((p) => p.id === ex.exerciseId);
-        const rec = recommend({ sets: ex.targetSets, repMin: ex.repMin, repMax: ex.repMax, equipment: ex.equipment, category: ex.category, lowerBody: ex.lowerBody }, h, settings, {
+        const rec = recommend({ sets: ex.targetSets, repMin: ex.repMin, repMax: ex.repMax, ...progressionExtras(src && src.name === ex.name ? src : ex, placeOf(workout)) }, h, settings, {
           startWeight: src && src.name === ex.name ? src.startWeight : undefined,
         });
         return { last: h[0], rec, src };
@@ -195,12 +199,23 @@ function ActiveWorkout({ initial }: { initial: Workout }) {
     toast(ex ? `Swapped to ${ex.name}` : 'Swapped');
   };
 
+  const harder = async (uid: string, name: string) => {
+    const updated = await makeExerciseHarder(workout, uid, name);
+    await saveWorkout(updated);
+    first.current = true;
+    setWorkout(updated);
+    toast(`Moved up to ${name}. Your home program uses it from now on.`);
+  };
+
   const finish = async () => {
     timer.skip();
     const done = await finishWorkout(workout);
     nav(`/workout/summary/${done.id}`, { replace: true, state: { justFinished: true } });
   };
 
+  // Stable while only set values change, so the memoized cards don't all re-render.
+  const namesKey = workout.exercises.map((e) => e.name).join('|');
+  const exerciseNames = useMemo(() => namesKey.split('|'), [namesKey]);
   const unchecked = totals.total - totals.done;
   const pct = totals.total ? (totals.done / totals.total) * 100 : 0;
 
@@ -211,6 +226,7 @@ function ActiveWorkout({ initial }: { initial: Workout }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <DayBadge day={workout.day} size="sm" />
+              {workout.place === 'home' && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-ink-2">Home</span>}
               <span className="tnum text-[13px] font-medium text-ink-3" aria-label={`Elapsed ${formatClock(elapsed)}`}>
                 {formatClock(elapsed)}
               </span>
@@ -255,6 +271,8 @@ function ActiveWorkout({ initial }: { initial: Workout }) {
           onChange={onChange}
           onSetDone={onSetDone}
           onSwap={() => void swap(ex.uid)}
+          onHarder={workout.place === 'home' ? (name) => void harder(ex.uid, name) : undefined}
+          otherNames={workout.place === 'home' ? exerciseNames : undefined}
         />
       ))}
 

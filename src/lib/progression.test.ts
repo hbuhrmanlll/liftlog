@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LOAD_DEFAULTS } from './defaults';
 import { deloadReminderWeeks, gradeSession, isStalled, recommend, workingWeight, type ProgressionTarget, type SessionResult } from './progression';
 import type { LoadSettings } from './rounding';
-import { BOTH_TARGETS, effectiveTargets, STRENGTH_TARGETS } from './targets';
+import { BOTH_TARGETS, effectiveTargets, isMainLift, STRENGTH_TARGETS } from './targets';
 import type { Exercise } from '../types';
 
 const LB: LoadSettings = { units: 'lb', ...LOAD_DEFAULTS.lb };
@@ -391,5 +391,38 @@ describe('deload reminder', () => {
 
   it('handles no workouts', () => {
     expect(deloadReminderWeeks([], now)).toBe(0);
+  });
+});
+
+describe('home (no equipment) exercises', () => {
+  const pushUp: ProgressionTarget = { sets: 4, repMin: 8, repMax: 20, equipment: 'bodyweight', category: 'compound', lowerBody: false, home: true, harder: 'Decline Push-Up', easier: 'Incline Push-Up' };
+  it('at the top of the range, moves to the harder variation instead of adding a belt', () => {
+    const r = recommend(pushUp, [session(0, [20, 20, 20, 20])], LB);
+    expect(r).toMatchObject({ action: 'up', weight: 0 });
+    expect(r.reason).toContain('Decline Push-Up');
+    expect(r.reason).not.toContain('dip belt');
+  });
+  it('with no harder variation, suggests a loaded backpack', () => {
+    const r = recommend({ ...pushUp, harder: undefined }, [session(0, [20, 20, 20, 20])], LB);
+    expect(r.action).toBe('up');
+    expect(r.weight).toBeGreaterThan(0);
+    expect(r.reason).toContain('backpack');
+  });
+  it('after two sessions under the range, points to the easier variation', () => {
+    const r = recommend(pushUp, [session(0, [6, 5, 5, 4]), session(0, [7, 6, 5, 5])], LB);
+    expect(r.action).toBe('down');
+    expect(r.reason).toContain('Incline Push-Up');
+  });
+});
+
+describe('main lift', () => {
+  it('ignores home exercises, so they keep their rep ranges in strength mode', () => {
+    const mk = (id: string, order: number, place?: 'home'): Exercise =>
+      ({ id, name: id, day: 'push', order, place, category: 'compound', equipment: 'barbell', muscles: ['chest'], lowerBody: false, sets: 4, repMin: 6, repMax: 10, restSec: 90, cues: [], mistakes: [], alternate: '' }) as Exercise;
+    const pushUp = mk('push-up', 0, 'home');
+    const bench = mk('bench', 0);
+    expect(isMainLift(bench, [pushUp, bench])).toBe(true);
+    expect(isMainLift(pushUp, [pushUp, bench])).toBe(false);
+    expect(effectiveTargets(pushUp, 'strength', isMainLift(pushUp, [pushUp, bench])).modified).toBe(false);
   });
 });

@@ -13,7 +13,7 @@ import { streamCoach } from '../lib/coachClient';
 import { formatCompact, formatDateLong, formatDuration } from '../lib/format';
 import { prsForWorkout } from '../lib/insights';
 import { formatLoad, recommend } from '../lib/progression';
-import { recommendationFor } from '../lib/session';
+import { progressionExtras, recommendationFor } from '../lib/session';
 import { DAY_LABEL } from '../lib/schedule';
 import type { Workout } from '../types';
 
@@ -34,7 +34,7 @@ function Summary({ workout }: { workout: Workout }) {
   const location = useLocation();
   const justFinished = Boolean((location.state as { justFinished?: boolean } | null)?.justFinished);
   const settings = useSettings();
-  const program = useProgram();
+  const program = useProgram('all');
   const workouts = useWorkouts();
   const bodyweight = useBodyweight();
   const overrides = useOverrides();
@@ -52,7 +52,7 @@ function Summary({ workout }: { workout: Workout }) {
           const history = exerciseHistory(workouts, ex.key);
           const r = src
             ? recommendationFor(src, program, workouts, settings)
-            : { recommendation: recommend({ sets: ex.targetSets, repMin: ex.repMin, repMax: ex.repMax, equipment: ex.equipment, category: ex.category, lowerBody: ex.lowerBody }, history, settings), targets: { sets: ex.targetSets, repMin: ex.repMin, repMax: ex.repMax } };
+            : { recommendation: recommend({ sets: ex.targetSets, repMin: ex.repMin, repMax: ex.repMax, ...progressionExtras(ex, workout.place) }, history, settings), targets: { sets: ex.targetSets, repMin: ex.repMin, repMax: ex.repMax } };
           return { ex, rec: r.recommendation, targets: r.targets, lastWeight: history[0] ? Math.max(...history[0].sets.map((s) => s.weight)) : null };
         }),
     [workout, program, workouts, settings],
@@ -66,7 +66,7 @@ function Summary({ workout }: { workout: Workout }) {
         </div>
         <h1 className="text-[28px] font-bold tracking-tight">{justFinished ? 'Workout complete' : `${DAY_LABEL[workout.day]} day summary`}</h1>
         <p className="mt-1 flex items-center justify-center gap-2 text-[14px] text-ink-2">
-          <DayBadge day={workout.day} size="sm" /> {formatDateLong(workout.startedAt)}
+          <DayBadge day={workout.day} size="sm" /> {workout.place === 'home' && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-2">Home</span>} {formatDateLong(workout.startedAt)}
         </p>
       </header>
 
@@ -174,7 +174,7 @@ function CoachWrapUp({ workout, auto }: { workout: Workout; auto: boolean }) {
         {
           task: 'wrapup',
           context,
-          messages: [{ role: 'user', content: `I just finished my ${DAY_LABEL[workout.day]} workout (${Math.round(workoutDurationSec(workout) / 60)} min).\n${lines}${workout.notes ? `\nMy notes: ${workout.notes}` : ''}\nWrite my wrap-up.` }],
+          messages: [{ role: 'user', content: `I just finished my ${DAY_LABEL[workout.day]} workout${workout.place === 'home' ? ' at home (no equipment)' : ''} (${Math.round(workoutDurationSec(workout) / 60)} min).\n${lines}${workout.notes ? `\nMy notes: ${workout.notes}` : ''}\nWrite my wrap-up.` }],
         },
         setText,
         signal,

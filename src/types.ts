@@ -46,11 +46,16 @@ export type Schedule = 3 | 6;
 export type Theme = 'dark' | 'light';
 
 /** An exercise in the user's program. `muscles[0]` is the primary muscle. */
+/** Where a workout happens: the gym program, or the no-equipment home program. */
+export type TrainingPlace = 'gym' | 'home';
+
 export interface Exercise {
   id: string;
   name: string;
   day: DayType;
   order: number;
+  /** Which program this belongs to; missing means the gym program. */
+  place?: TrainingPlace;
   muscles: MuscleGroup[];
   equipment: Equipment;
   category: Category;
@@ -63,6 +68,8 @@ export interface Exercise {
   cues: string[];
   mistakes: string[];
   alternate: string;
+  /** Home exercises: the next harder variation once the top of the rep range is easy. */
+  harder?: string;
   videoUrl?: string;
   /** Starting weight entered during onboarding / first workout. */
   startWeight?: number;
@@ -119,6 +126,8 @@ export interface WorkoutExercise {
 export interface Workout {
   id: string;
   day: DayType;
+  /** Missing on workouts from before home workouts existed: those were gym workouts. */
+  place?: TrainingPlace;
   status: 'active' | 'completed';
   startedAt: number;
   finishedAt?: number;
@@ -192,6 +201,13 @@ export interface Settings {
   setTimerSec: number;
   /** Keep the screen on while a workout is open. */
   keepAwake: boolean;
+  /** Gym or home, as last picked when starting a workout. */
+  lastPlace: TrainingPlace;
+  /** Weekdays you plan to train (0 = Sunday), for workout reminders. */
+  trainingDays: number[];
+  /** Android app: a motivating notification on training days at reminderTime ("HH:MM"). */
+  workoutReminders: boolean;
+  reminderTime: string;
   deloadReminders: boolean;
   warmupSuggestions: boolean;
   aiEnabled: boolean;

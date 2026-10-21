@@ -16,9 +16,11 @@ async function doPush(reps: (i: number) => number) {
 }
 
 describe('repo', () => {
-  it('seeds settings and the 18-exercise program once', async () => {
+  it('seeds settings, the gym program (6 lifts + core per day) and the home program once', async () => {
     await ensureSeeded();
-    expect(await db.exercises.count()).toBe(18);
+    expect(await db.exercises.count()).toBe(39);
+    expect((await getProgram()).filter((e) => e.day === 'push').map((e) => e.name).at(-1)).toBe('Cable Crunch');
+    expect(await getProgram('home')).toHaveLength(18);
     expect((await getSettings()).units).toBe('lb');
   });
 
@@ -63,7 +65,9 @@ describe('repo', () => {
     await moveExercise(before[1].id, -1);
     const after = (await getProgram()).filter((e) => e.day === 'push');
     expect(after[0].id).toBe(before[1].id);
-    expect(after.map((e) => e.order)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(after.map((e) => e.order)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    // The home push day keeps its own order.
+    expect((await getProgram('home')).filter((e) => e.day === 'push').map((e) => e.order)).toEqual([0, 1, 2, 3, 4, 5]);
   });
 
   it('exports and re-imports a backup', async () => {
@@ -93,7 +97,34 @@ describe('repo', () => {
     await doPush(() => 8);
     await resetAll();
     expect(await db.workouts.count()).toBe(0);
-    expect(await db.exercises.count()).toBe(18);
+    expect(await db.exercises.count()).toBe(39);
     expect((await getSettings()).onboarded).toBe(false);
+  });
+
+  it('adds core and the home program to a program from an older version, once', async () => {
+    const gym = (await getProgram()).filter((e) => e.muscles[0] !== 'core').map(({ place: _p, ...e }) => e);
+    await db.exercises.clear();
+    await db.exercises.bulkPut(gym);
+    await db.kv.clear();
+    await ensureSeeded();
+    const program = await getProgram();
+    expect(program.filter((e) => e.day === 'legs').map((e) => e.name).at(-1)).toBe('Ab Wheel Rollout');
+    expect(program.filter((e) => e.day === 'legs').map((e) => e.order)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(await getProgram('home')).toHaveLength(18);
+    // Removing the core exercise later sticks.
+    await db.exercises.delete(program.find((e) => e.name === 'Ab Wheel Rollout')!.id);
+    await ensureSeeded();
+    expect((await getProgram()).some((e) => e.name === 'Ab Wheel Rollout')).toBe(false);
+  });
+
+  it('runs a home workout from the home program and keeps it in the rotation', async () => {
+    const w = await startWorkout('push', 'home');
+    expect(w.place).toBe('home');
+    expect(w.exercises.map((e) => e.name)).toEqual(['Push-Up', 'Pike Push-Up', 'Decline Push-Up', 'Chair Dip', 'Diamond Push-Up', 'Plank Shoulder Tap']);
+    expect(w.exercises[0].sets[0].weight).toBe(0);
+    const done = { ...w, exercises: w.exercises.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s, weight: 0, reps: ex.repMax, done: true })) })) };
+    await finishWorkout(done);
+    const swapped = await swapWorkoutExercise(await startWorkout('push', 'home'), (await getActiveWorkout())!.exercises[0].uid);
+    expect(swapped.exercises[0].name).toBe('Incline Push-Up');
   });
 });

@@ -2,10 +2,10 @@ import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ReminderSync } from './components/ReminderSync';
 import { RestTimerProvider } from './hooks/restTimer';
 import { ToastProvider } from './hooks/toast';
 import { useSettingsLoaded } from './hooks/useData';
-import { syncWeighInNotification } from './lib/notifications';
 import { HistoryPage } from './pages/HistoryPage';
 import { HomePage } from './pages/HomePage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -52,14 +52,6 @@ export default function App() {
     }
   }, [settings]);
 
-  // Android app: a real weekly notification for the weigh-in (no-op in a browser).
-  const weighIn = settings?.onboarded ? `${settings.weighInReminders}:${settings.weighInDay}` : null;
-  useEffect(() => {
-    if (!weighIn) return;
-    const [on, day] = weighIn.split(':');
-    void syncWeighInNotification(on === 'true', Number(day));
-  }, [weighIn]);
-
   if (!settings) return <div className="min-h-dvh bg-bg" aria-busy="true" />;
 
   if (!settings.onboarded && pathname !== '/welcome') return <Navigate to="/welcome" replace />;
@@ -78,6 +70,7 @@ export default function App() {
         }}
       >
         <ScrollToTop />
+        <ReminderSync />
         {pathname === '/welcome' ? (
           <OnboardingPage />
         ) : (

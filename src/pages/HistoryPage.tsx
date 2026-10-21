@@ -82,7 +82,7 @@ function WorkoutRow({ w, units, bw, stats }: { w: Workout; units: string; bw?: n
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <DayBadge day={w.day} size="sm" />
+            <DayBadge day={w.day} size="sm" /> {w.place === 'home' && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-2">Home</span>}
             {w.coachSummary && <span className="text-[11px] text-ink-3">Coach note</span>}
           </div>
           <p className="tnum mt-1 text-[13px] text-ink-3">

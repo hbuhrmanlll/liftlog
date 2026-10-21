@@ -57,13 +57,19 @@ export function buildCoachContext(input: CoachContextInput): string {
   // Program + engine recommendations
   const programLines: string[] = [];
   const recLines: string[] = [];
-  for (const day of ['push', 'pull', 'legs'] as const) {
-    const list = program.filter((e) => e.day === day).sort((a, b) => a.order - b.order);
-    programLines.push(`${DAY_LABEL[day]}:`);
+  const gymProgram = program.filter((e) => e.place !== 'home');
+  const homeProgram = program.filter((e) => e.place === 'home');
+  const days = [
+    ...(['push', 'pull', 'legs'] as const).map((day) => ({ day, list: gymProgram, title: DAY_LABEL[day] })),
+    ...(homeProgram.length ? (['push', 'pull', 'legs'] as const).map((day) => ({ day, list: homeProgram, title: `${DAY_LABEL[day]} at home (no equipment)` })) : []),
+  ];
+  for (const { day, list: source, title } of days) {
+    const list = source.filter((e) => e.day === day).sort((a, b) => a.order - b.order);
+    programLines.push(`${title}:`);
     for (const ex of list) {
       const r = recommendationFor(ex, program, workouts, settings);
       const t = r.targets;
-      programLines.push(`  - ${ex.name}: ${t.sets}x${t.repMin}-${t.repMax}, rest ${Math.round(t.restSec / 60 * 10) / 10} min, ${ex.equipment}/${ex.category}${isMainLift(ex, program) ? ' [main lift]' : ''}; muscles ${ex.muscles.join(', ')}`);
+      programLines.push(`  - ${ex.name}: ${t.sets}x${t.repMin}-${t.repMax}, rest ${Math.round(t.restSec / 60 * 10) / 10} min, ${ex.equipment}/${ex.category}${isMainLift(ex, gymProgram) ? ' [main lift]' : ''}; muscles ${ex.muscles.join(', ')}`);
       const rec = r.recommendation;
       if (rec.action !== 'start' || rec.weight !== null) {
         recLines.push(`- ${ex.name}: ${ACTION_LABEL[rec.action]}${rec.weight !== null ? ` -> ${w(rec.weight)} ${u}` : ''}. ${rec.reason}${rec.stalled ? ' [STALLED]' : ''}`);
@@ -113,7 +119,7 @@ export function buildCoachContext(input: CoachContextInput): string {
         .filter(Boolean)
         .join(' | ');
       const notes = wo.notes ? ` Notes: "${wo.notes.slice(0, 200)}"` : '';
-      return `${iso(wo.startedAt)} ${DAY_LABEL[wo.day]} (${Math.round(workoutDurationSec(wo) / 60)} min): ${exLines}.${notes}`;
+      return `${iso(wo.startedAt)} ${DAY_LABEL[wo.day]}${wo.place === 'home' ? ' at home' : ''} (${Math.round(workoutDurationSec(wo) / 60)} min): ${exLines}.${notes}`;
     });
     sections.push({ priority: 1, title: `SESSIONS, LAST 4 WEEKS (newest first; weight x reps in ${u})`, body: lines.join('\n') });
   }

@@ -17,7 +17,7 @@ import { parseYouTubeId } from '../lib/youtube';
 
 export function ExerciseDetailPage() {
   const { id } = useParams();
-  const program = useProgram();
+  const program = useProgram('all');
   const workouts = useWorkouts();
   const settings = useSettings();
   const overrides = useOverrides();

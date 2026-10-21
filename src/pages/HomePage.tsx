@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { WeeklyCheckin, type CheckinRecord } from '../components/coach';
 import { MuscleVolume } from '../components/MuscleVolume';
 import { Button, Card, cx, DayBadge, dayStyles, RecBadge, SectionTitle, Stat } from '../components/ui';
+import { PlacePicker } from '../components/PlacePicker';
 import { setKv, startWorkout } from '../db/repo';
 import { latestBodyweight, useActiveWorkout, useBodyweight, useCardio, useKv, useProgram, useSettings, useWorkouts } from '../hooks/useData';
 import { completedWorkouts, DAY_MS, startOfWeek, weeklyStats, weekStreak } from '../lib/calculations';
@@ -28,7 +29,8 @@ function greeting(): string {
 export function HomePage() {
   const nav = useNavigate();
   const settings = useSettings();
-  const program = useProgram();
+  const place = settings.lastPlace;
+  const program = useProgram(place);
   const workouts = useWorkouts();
   const cardio = useCardio();
   const bodyweight = useBodyweight();
@@ -61,7 +63,7 @@ export function HomePage() {
   const estMinutes = Math.round(dayExercises.reduce((m, e) => m + e.sets * (e.restSec / 60 + 0.75), 0) + 5);
 
   const start = async (day: DayType) => {
-    await startWorkout(day);
+    await startWorkout(day, place);
     nav('/workout');
   };
 
@@ -107,7 +109,7 @@ export function HomePage() {
           <div className={cx('h-1', dayStyles.dot[next])} />
           <div className="p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[13px] font-semibold uppercase tracking-wider text-ink-3">Next up</span>
+              <span className="text-[13px] font-semibold uppercase tracking-wider text-ink-3">Next up{place === 'home' ? ' · at home' : ''}</span>
               <span className="flex items-center gap-1 text-[13px] text-ink-3">
                 <Clock className="size-3.5" aria-hidden /> ~{estMinutes} min
               </span>
@@ -116,7 +118,8 @@ export function HomePage() {
               <h2 className={cx('text-[34px] font-extrabold leading-none tracking-tight', dayStyles.text[next])}>{DAY_LABEL[next]}</h2>
               <span className="text-[15px] text-ink-2">{DAY_DESCRIPTION[next]}</span>
             </div>
-            <p className="mt-2 text-[13px] text-ink-3">{lastOfNext ? `Last ${DAY_LABEL[next]} day: ${relativeDay(lastOfNext.startedAt, now)}` : done.length === 0 ? 'Your first workout. Let’s go.' : `First ${DAY_LABEL[next]} day`}</p>
+            <PlacePicker value={place} className="mt-4" />
+            <p className="mt-3 text-[13px] text-ink-3">{lastOfNext ? `Last ${DAY_LABEL[next]} day: ${relativeDay(lastOfNext.startedAt, now)}` : done.length === 0 ? 'Your first workout. Let’s go.' : `First ${DAY_LABEL[next]} day`}</p>
             <ul className="mt-4 space-y-2">
               {dayExercises.map((ex) => {
                 const r = recs.find((x) => x.exercise.id === ex.id);
@@ -133,7 +136,7 @@ export function HomePage() {
               })}
             </ul>
             <Button variant="primary" size="xl" className="mt-5 w-full" onClick={() => void start(next)}>
-              <Play className="size-5 fill-current" aria-hidden /> Start {DAY_LABEL[next]} workout
+              <Play className="size-5 fill-current" aria-hidden /> Start {DAY_LABEL[next]} workout{place === 'home' ? ' at home' : ''}
             </Button>
             <div className="mt-3 flex items-center justify-center gap-1 text-[13px] text-ink-3">
               <span>Or start</span>

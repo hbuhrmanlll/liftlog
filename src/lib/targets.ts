@@ -9,10 +9,11 @@ export interface Targets {
   modified: boolean;
 }
 
-/** The first compound lift of a day (by order) is the "main lift". */
+/** The first compound lift of a gym day (by order) is the "main lift". Home exercises never are. */
 export function isMainLift(exercise: Exercise, dayExercises: Exercise[]): boolean {
+  if (exercise.place === 'home') return false;
   const first = [...dayExercises]
-    .filter((e) => e.day === exercise.day && e.category === 'compound')
+    .filter((e) => e.day === exercise.day && e.category === 'compound' && e.place !== 'home')
     .sort((a, b) => a.order - b.order)[0];
   return first?.id === exercise.id;
 }

@@ -28,6 +28,8 @@ const equipment = z.enum(EQUIPMENT as unknown as [string, ...string[]]);
 const muscle = z.enum(MUSCLE_GROUPS as unknown as [string, ...string[]]);
 const action = z.enum(['up', 'stay', 'down', 'deload', 'start']);
 
+const place = z.enum(['gym', 'home']).optional();
+
 const exerciseSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
@@ -44,6 +46,8 @@ const exerciseSchema = z.object({
   cues: z.array(z.string()),
   mistakes: z.array(z.string()),
   alternate: z.string(),
+  harder: z.string().optional(),
+  place,
   videoUrl: z.string().optional(),
   startWeight: z.number().optional(),
 });
@@ -86,6 +90,7 @@ const workoutSchema = z.object({
   status: z.enum(['active', 'completed']),
   startedAt: z.number(),
   finishedAt: z.number().optional(),
+  place,
   exercises: z.array(workoutExerciseSchema),
   notes: z.string(),
   coachSummary: z.string().optional(),

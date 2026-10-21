@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { DEFAULT_SETTINGS } from '../lib/defaults';
-import type { BodyweightLog, CardioLog, ChatMessage, Exercise, Settings, WeightOverride, Workout } from '../types';
+import type { BodyweightLog, CardioLog, ChatMessage, Exercise, Settings, WeightOverride, Workout, TrainingPlace } from '../types';
 
 const EMPTY: never[] = [];
 
@@ -17,8 +17,13 @@ export function useSettingsLoaded(): Settings | undefined {
   });
 }
 
-export function useProgram(): Exercise[] {
-  return useLiveQuery(async () => (await db.exercises.toArray()).sort((a, b) => a.order - b.order), [], EMPTY);
+/** The gym program by default; 'home' for the home program, 'all' for both. */
+export function useProgram(place: TrainingPlace | 'all' = 'gym'): Exercise[] {
+  return useLiveQuery(
+    async () => (await db.exercises.toArray()).filter((e) => place === 'all' || (e.place ?? 'gym') === place).sort((a, b) => a.order - b.order),
+    [place],
+    EMPTY,
+  );
 }
 
 export function useWorkouts(): Workout[] {

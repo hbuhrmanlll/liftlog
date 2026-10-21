@@ -1,9 +1,26 @@
 /** Builds the pre-filled exercise rows for a new workout. Pure; no DB access. */
-import type { Exercise, Settings, SetLog, WeightOverride, Workout, WorkoutExercise } from '../types';
+import { findLibraryExercise } from '../data/exerciseLibrary';
+import type { Exercise, Settings, SetLog, TrainingPlace, WeightOverride, Workout, WorkoutExercise } from '../types';
 import { exerciseHistory, normalizeKey } from './calculations';
 import { recommend, type Recommendation } from './progression';
 import { effectiveTargets, isMainLift } from './targets';
 import { warmupSets } from './warmup';
+
+/**
+ * Everything the progression engine needs besides the targets. Home exercises
+ * progress by reps and harder variations instead of added weight.
+ */
+export function progressionExtras(ex: { name: string; equipment: Exercise['equipment']; category: Exercise['category']; lowerBody: boolean; place?: TrainingPlace; alternate?: string; harder?: string }, place?: TrainingPlace) {
+  const lib = findLibraryExercise(ex.name);
+  return {
+    equipment: ex.equipment,
+    category: ex.category,
+    lowerBody: ex.lowerBody,
+    home: (place ?? ex.place) === 'home',
+    harder: ex.harder ?? lib?.harder,
+    easier: ex.alternate ?? lib?.alternate,
+  };
+}
 
 let seq = 0;
 export function uid(prefix: string): string {
@@ -23,7 +40,7 @@ export interface ExerciseRecommendation {
 export function recommendationFor(exercise: Exercise, program: Exercise[], workouts: Workout[], settings: Settings, excludeWorkoutId?: string): ExerciseRecommendation {
   const targets = effectiveTargets(exercise, settings.goal, isMainLift(exercise, program));
   const history = exerciseHistory(workouts, normalizeKey(exercise.name), excludeWorkoutId);
-  const recommendation = recommend({ ...targets, equipment: exercise.equipment, category: exercise.category, lowerBody: exercise.lowerBody }, history, settings, {
+  const recommendation = recommend({ ...targets, ...progressionExtras(exercise) }, history, settings, {
     startWeight: exercise.startWeight,
   });
   return { exercise, recommendation, targets };
@@ -89,12 +106,13 @@ export function buildWorkoutExercise(
   };
 }
 
-export function buildWorkout(day: Workout['day'], program: Exercise[], workouts: Workout[], settings: Settings, overrides: WeightOverride[], now: number): Workout {
+export function buildWorkout(day: Workout['day'], program: Exercise[], workouts: Workout[], settings: Settings, overrides: WeightOverride[], now: number, place: TrainingPlace = 'gym'): Workout {
   const byKey = new Map(overrides.map((o) => [o.key, o]));
-  const dayExercises = program.filter((e) => e.day === day).sort((a, b) => a.order - b.order);
+  const dayExercises = program.filter((e) => e.day === day && (e.place ?? 'gym') === place).sort((a, b) => a.order - b.order);
   return {
     id: uid('wo'),
     day,
+    place,
     status: 'active',
     startedAt: now,
     exercises: dayExercises.map((ex) => buildWorkoutExercise(ex, program, workouts, settings, byKey.get(normalizeKey(ex.name)))),

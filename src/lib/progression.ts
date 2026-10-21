@@ -32,6 +32,10 @@ export interface ProgressionTarget {
   equipment: Equipment;
   category: Category;
   lowerBody: boolean;
+  /** Home (no equipment): progress by reps, then by the harder variation. */
+  home?: boolean;
+  harder?: string;
+  easier?: string;
 }
 
 export interface Recommendation {
@@ -190,6 +194,24 @@ export function recommend(
       };
     }
     const next = increaseLoad(w, increment, target.equipment, load);
+    if (target.home && target.harder) {
+      return {
+        action: 'up',
+        weight: w,
+        reason: `You hit ${target.repMax} reps on all ${target.sets} sets. Make it harder: switch to ${target.harder} (tap ⋯ on the exercise), or slow every rep to 3 seconds down.`,
+        goal: `${target.sets} sets of ${target.repMin}+ reps of ${target.harder}`,
+        stalled: false,
+      };
+    }
+    if (target.home) {
+      return {
+        action: 'up',
+        weight: next,
+        reason: `You hit ${target.repMax} reps on all ${target.sets} sets. Add ${Math.round((next - w) * 100) / 100} ${load.units}: wear a backpack with books or water bottles (${fmt(next)}), or slow every rep to 3 seconds down.`,
+        goal: `${target.sets} sets of ${target.repMin}+ reps at ${fmt(next)}`,
+        stalled: false,
+      };
+    }
     if (isBodyweight) {
       const added = next;
       return {
@@ -219,7 +241,9 @@ export function recommend(
           return {
             action: 'down',
             weight: 0,
-            reason: `Two sessions in a row under ${target.repMin} reps. Use band assistance or switch to the alternate (e.g. Lat Pulldown) to get quality reps in the range.`,
+            reason: target.home
+              ? `Two sessions in a row under ${target.repMin} reps. Switch to an easier version${target.easier ? ` (${target.easier})` : ''} and build back up.`
+              : `Two sessions in a row under ${target.repMin} reps. Use band assistance or switch to the alternate (e.g. Lat Pulldown) to get quality reps in the range.`,
             goal: `${target.sets} sets of ${target.repMin}-${target.repMax} reps`,
             stalled: false,
           };

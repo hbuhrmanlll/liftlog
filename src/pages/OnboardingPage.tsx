@@ -75,7 +75,7 @@ export function OnboardingPage() {
                     key={s}
                     type="button"
                     aria-pressed={settings.schedule === s}
-                    onClick={() => void updateSettings({ schedule: s })}
+                    onClick={() => void updateSettings({ schedule: s, trainingDays: s === 6 ? [1, 2, 3, 4, 5, 6] : [1, 3, 5] })}
                     className={cx('rounded-2xl border p-4 text-left transition-colors', settings.schedule === s ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:bg-surface-2')}
                   >
                     <div className="text-2xl font-bold">{s} days</div>

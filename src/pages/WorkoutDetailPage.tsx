@@ -69,7 +69,7 @@ function Detail({ workout }: { workout: Workout }) {
         title={`${DAY_LABEL[w.day]} day`}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
-            <DayBadge day={w.day} size="sm" />
+            <DayBadge day={w.day} size="sm" /> {w.place === 'home' && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-2">Home</span>}
             {formatDateLong(w.startedAt)} · {formatTime(w.startedAt)}
           </span>
         }

@@ -9,7 +9,7 @@ import { useProgram, useSettings } from '../hooks/useData';
 import { formatClock } from '../lib/format';
 import { DAY_LABEL } from '../lib/schedule';
 import { effectiveTargets, isMainLift } from '../lib/targets';
-import { DAY_TYPES, EQUIPMENT, MUSCLE_GROUPS, type Category, type DayType, type Equipment, type Exercise, type LibraryExercise, type MuscleGroup } from '../types';
+import { DAY_TYPES, EQUIPMENT, MUSCLE_GROUPS, type Category, type DayType, type Equipment, type Exercise, type LibraryExercise, type MuscleGroup, type TrainingPlace } from '../types';
 
 const DAY_MUSCLES: Record<DayType, MuscleGroup[]> = {
   push: ['chest', 'shoulders', 'triceps'],
@@ -20,7 +20,9 @@ const DAY_MUSCLES: Record<DayType, MuscleGroup[]> = {
 export function ProgramPage() {
   const [params, setParams] = useSearchParams();
   const day = (DAY_TYPES as readonly string[]).includes(params.get('day') ?? '') ? (params.get('day') as DayType) : 'push';
-  const program = useProgram();
+  const place: TrainingPlace = params.get('place') === 'home' ? 'home' : 'gym';
+  const setView = (next: { day?: DayType; place?: TrainingPlace }) => setParams({ day: next.day ?? day, place: next.place ?? place }, { replace: true });
+  const program = useProgram(place);
   const settings = useSettings();
   const toast = useToast();
   const list = program.filter((e) => e.day === day);
@@ -34,16 +36,30 @@ export function ProgramPage() {
     <div className="animate-fade-up space-y-5">
       <PageHeader
         title="Program"
-        subtitle="Your Push / Pull / Legs days. Tap an exercise for form tips and history."
+        subtitle="Your Push / Pull / Legs days, at the gym and at home. Tap an exercise for form tips and history."
         action={
-          <IconButton label="Reset program to default" onClick={() => setConfirmReset(true)}>
+          <IconButton label={`Reset ${place} program to default`} onClick={() => setConfirmReset(true)}>
             <RotateCcw className="size-5" aria-hidden />
           </IconButton>
         }
       />
-      <Segmented<DayType> label="Day" value={day} onChange={(d) => setParams({ day: d }, { replace: true })} options={DAY_TYPES.map((d) => ({ value: d, label: DAY_LABEL[d] }))} />
+      <Segmented<TrainingPlace>
+        label="Program"
+        value={place}
+        onChange={(p) => setView({ place: p })}
+        options={[
+          { value: 'gym', label: 'Gym' },
+          { value: 'home', label: 'Home' },
+        ]}
+      />
+      <Segmented<DayType> label="Day" value={day} onChange={(d) => setView({ day: d })} options={DAY_TYPES.map((d) => ({ value: d, label: DAY_LABEL[d] }))} />
 
-      {settings.goal !== 'muscle' && (
+      {place === 'home' && (
+        <p className="rounded-xl bg-surface-2 px-4 py-3 text-[13px] text-ink-2">
+          Bodyweight versions of each day for when you can't get to the gym. They progress by reps, then by a harder variation. Added weight (like a loaded backpack) is optional.
+        </p>
+      )}
+      {place === 'gym' && settings.goal !== 'muscle' && (
         <p className="rounded-xl bg-surface-2 px-4 py-3 text-[13px] text-ink-2">
           {settings.goal === 'strength' ? 'Get Stronger' : 'Both'} mode: the first compound lift each day uses {settings.goal === 'strength' ? '5 sets of 3-6 reps with 4 min rest' : '4 sets of 5-8 reps with 3 min rest'}. Change your goal in Settings.
         </p>
@@ -96,6 +112,7 @@ export function ProgramPage() {
         {swapping && (
           <LibraryPicker
             day={swapping.day}
+            homeOnly={place === 'home'}
             highlight={swapping.alternate}
             exclude={program.map((e) => e.name)}
             onPick={async (lib) => {
@@ -110,9 +127,10 @@ export function ProgramPage() {
       <Sheet open={adding} onClose={() => setAdding(false)} title={`Add to ${DAY_LABEL[day]} day`} wide>
         <LibraryPicker
           day={day}
+          homeOnly={place === 'home'}
           exclude={program.map((e) => e.name)}
           onPick={async (lib) => {
-            await addExerciseToDay(day, lib);
+            await addExerciseToDay(day, lib, undefined, place);
             toast(`Added ${lib.name}`);
             setAdding(false);
           }}
@@ -137,12 +155,12 @@ export function ProgramPage() {
       />
       <ConfirmDialog
         open={confirmReset}
-        title="Reset program?"
-        message="This restores the default 6-exercise Push / Pull / Legs program. Your workout history is kept, but custom exercises, edits, starting weights, and saved videos are lost."
+        title={place === 'home' ? 'Reset home program?' : 'Reset gym program?'}
+        message={`This restores the default ${place} Push / Pull / Legs program. Your workout history is kept, but custom exercises, edits, starting weights, and saved videos in this program are lost.`}
         confirmLabel="Reset program"
         danger
         onConfirm={async () => {
-          await resetProgram();
+          await resetProgram(place);
           toast('Program reset to default');
         }}
         onClose={() => setConfirmReset(false)}
@@ -212,19 +230,20 @@ function EditForm({ exercise, onClose }: { exercise: Exercise; onClose: () => vo
   );
 }
 
-function LibraryPicker({ day, exclude, highlight, onPick }: { day: DayType; exclude: string[]; highlight?: string; onPick: (lib: LibraryExercise) => void | Promise<void> }) {
+function LibraryPicker({ day, exclude, highlight, homeOnly, onPick }: { day: DayType; exclude: string[]; highlight?: string; homeOnly?: boolean; onPick: (lib: LibraryExercise) => void | Promise<void> }) {
   const [q, setQ] = useState('');
   const [custom, setCustom] = useState(false);
   const excluded = new Set(exclude.map((e) => e.toLowerCase()));
   const items = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return EXERCISE_LIBRARY.filter((l) => !excluded.has(l.name.toLowerCase()))
+    // At home, only exercises that need no equipment (the home list first).
+    return EXERCISE_LIBRARY.filter((l) => !excluded.has(l.name.toLowerCase()) && (!homeOnly || l.equipment === 'bodyweight'))
       .filter((l) => !term || l.name.toLowerCase().includes(term) || l.muscles.some((m) => m.includes(term)) || l.equipment.includes(term))
-      .map((l) => ({ l, score: (l.name === highlight ? -10 : 0) + (DAY_MUSCLES[day].includes(l.muscles[0]) ? -1 : 0) }))
+      .map((l) => ({ l, score: (l.name === highlight ? -10 : 0) + (DAY_MUSCLES[day].includes(l.muscles[0]) ? -1 : 0) + (homeOnly && l.place === 'home' ? -2 : 0) }))
       .sort((a, b) => a.score - b.score)
       .map((x) => x.l);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, day, highlight, exclude.join('|')]);
+  }, [q, day, highlight, homeOnly, exclude.join('|')]);
 
   if (custom) return <CustomExerciseForm day={day} onSubmit={onPick} onCancel={() => setCustom(false)} />;
 

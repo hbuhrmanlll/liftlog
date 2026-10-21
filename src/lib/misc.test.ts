@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXERCISE_LIBRARY, findLibraryExercise } from '../data/exerciseLibrary';
+import { EXERCISE_LIBRARY, findLibraryExercise, nextHarder } from '../data/exerciseLibrary';
 import { buildSeedProgram } from '../data/seedProgram';
 import type { Workout } from '../types';
 import { LOAD_DEFAULTS } from './defaults';
@@ -73,17 +73,28 @@ describe('warm-ups', () => {
 
 describe('seed program', () => {
   const program = buildSeedProgram();
-  it('has 6 exercises per day in the specified order', () => {
-    expect(program.filter((e) => e.day === 'push').map((e) => e.name)).toEqual([
+  it('has 6 lifts plus a core exercise per gym day, in the specified order', () => {
+    const gym = program.filter((e) => e.place === 'gym');
+    expect(gym.filter((e) => e.day === 'push').map((e) => e.name)).toEqual([
       'Barbell Bench Press',
       'Standing Overhead Press',
       'Incline Dumbbell Press',
       'Dumbbell Lateral Raise',
       'Cable Triceps Pushdown',
       'Overhead Cable Triceps Extension',
+      'Cable Crunch',
     ]);
-    expect(program.filter((e) => e.day === 'pull')).toHaveLength(6);
-    expect(program.filter((e) => e.day === 'legs')).toHaveLength(6);
+    expect(gym.filter((e) => e.day === 'pull')).toHaveLength(7);
+    expect(gym.filter((e) => e.day === 'legs')).toHaveLength(7);
+  });
+  it('has a no-equipment home version of every day that ends with core', () => {
+    const home = program.filter((e) => e.place === 'home');
+    for (const day of ['push', 'pull', 'legs'] as const) {
+      const list = home.filter((e) => e.day === day);
+      expect(list).toHaveLength(6);
+      expect(list.every((e) => e.equipment === 'bodyweight')).toBe(true);
+      expect(list.at(-1)!.muscles[0]).toBe('core');
+    }
   });
   it('matches the sets / reps / rest spec', () => {
     const by = (n: string) => program.find((e) => e.name === n)!;
@@ -104,5 +115,16 @@ describe('seed program', () => {
   });
   it('every alternate exists in the library', () => {
     for (const e of [...EXERCISE_LIBRARY, ...program]) expect(findLibraryExercise(e.alternate), `${e.name} -> ${e.alternate}`).toBeDefined();
+  });
+});
+
+describe('harder variations', () => {
+  it('skips variations already in the workout', () => {
+    expect(nextHarder('Push-Up', [])).toBe('Decline Push-Up');
+    expect(nextHarder('Push-Up', ['Push-Up', 'Decline Push-Up'])).toBe('Archer Push-Up');
+    expect(nextHarder('Archer Push-Up', [])).toBeUndefined();
+    // Every harder variation named in the library exists.
+    for (const e of EXERCISE_LIBRARY) if (e.harder) expect(findLibraryExercise(e.harder), e.harder).toBeDefined();
+    for (const e of EXERCISE_LIBRARY) if (e.place === 'home') expect(findLibraryExercise(e.alternate), e.alternate).toBeDefined();
   });
 });
